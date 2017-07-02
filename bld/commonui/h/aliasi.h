@@ -24,31 +24,12 @@
 *
 *  ========================================================================
 *
-* Description:  WHEN YOU FIGURE OUT WHAT THIS FILE DOES, PLEASE
-*               DESCRIBE IT HERE!
+* Description:  Memory aliases resource ID's
 *
 ****************************************************************************/
 
 
-#include <wwindows.h>
-#include "wrglbl.h"
-#include "wresall.h"
-
-void WRAPI WRCleanDir( WResDir dir )
-{
-    WResTypeNode        *tnode;
-    WResResNode         *rnode;
-    WResLangNode        *lnode;
-
-    if( dir == NULL ) {
-        return;
-    }
-
-    for( tnode = dir->Head; tnode != NULL; tnode = tnode->Next ) {
-        for( rnode = tnode->Head; rnode != NULL; rnode = rnode->Next ) {
-            for( lnode = rnode->Head; lnode != NULL; lnode = lnode->Next ) {
-                lnode->data = NULL;
-            }
-        }
-    }
-}
+#define ALIAS_TEXT                  102
+#define ALIAS_DO_MORE               108
+#define ALIAS_CUR_ID                103
+#define ALIAS_ID_LIST               105

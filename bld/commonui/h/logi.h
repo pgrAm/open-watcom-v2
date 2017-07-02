@@ -24,31 +24,31 @@
 *
 *  ========================================================================
 *
-* Description:  WHEN YOU FIGURE OUT WHAT THIS FILE DOES, PLEASE
-*               DESCRIBE IT HERE!
+* Description:  File logging resource ID's
 *
 ****************************************************************************/
 
 
-#include <wwindows.h>
-#include "wrglbl.h"
-#include "wresall.h"
+/* Constants for log exists dialog */
+#define LOG_TEXT                        101
+#define LOG_APPEND                      102
+#define LOG_REPLACE                     103
+#define LOG_CANCEL                      IDCANCEL
 
-void WRAPI WRCleanDir( WResDir dir )
-{
-    WResTypeNode        *tnode;
-    WResResNode         *rnode;
-    WResLangNode        *lnode;
-
-    if( dir == NULL ) {
-        return;
-    }
-
-    for( tnode = dir->Head; tnode != NULL; tnode = tnode->Next ) {
-        for( rnode = tnode->Head; rnode != NULL; rnode = rnode->Next ) {
-            for( lnode = rnode->Head; lnode != NULL; lnode = lnode->Next ) {
-                lnode->data = NULL;
-            }
-        }
-    }
-}
+/* Constants for the configure log dialog */
+#define LOG_CFG_GROUP               201
+#define LOG_CFG_CONT                202
+#define LOG_CFG_PERIODIC            203
+#define LOG_CFG_NAME_GROUP          204
+#define LOG_CFG_QUERY_NAME          205
+#define LOG_CFG_USE_NAME            206
+#define LOG_CFG_ACTION_GROUP        207
+#define LOG_CFG_REPLACE             208
+#define LOG_CFG_APPEND              209
+#define LOG_CFG_QUERY               210
+#define LOG_CFG_OK                  IDOK
+#define LOG_CFG_CANCEL              IDCANCEL
+#define LOG_CFG_TYPE_GROUP          213
+#define LOG_CFG_LNAME_GROUP         214
+#define LOG_CFG_NAME_EDIT           215
+#define LOG_CFG_BROWSE              216
