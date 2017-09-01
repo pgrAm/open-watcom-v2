@@ -113,11 +113,8 @@ MConfig::MConfig( WFileName& filename, bool debug, HostType host, const char *in
     #ifdef __AXP__
         _hostType = HOST_NT_AXP;
     #else
-        DWORD ver;
-
         _hostType = HOST_NT;
-        ver = GetVersion();
-        if( !( ver < 0x80000000 ) && !( LOBYTE( LOWORD( ver ) ) < 4 ) ) {
+        if( (GetVersion() & 0x800000FF) >= 0x80000004 ) {
             _hostType = HOST_WIN95;
         }
     #endif

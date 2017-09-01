@@ -183,13 +183,19 @@ bool Zero64                     // TEST IF 64-BITTER IS ZERO
     return( test->u._32[0] == 0 && test->u._32[1] == 0 );
 }
 
-
-static bool zeroConstant(       // TEST IF NODE IS ZERO CONSTANT
-    PTREE expr )                // - the expression
+/**
+ * Check if node is or evaluates to a zero constant for folding purposes.
+ *
+ * \param expr The expression to be analyzed.
+ */
+static bool zeroConstant( PTREE expr )
 {
     PTREE orig;
 
     switch( expr->op ) {
+    // For boolean folding purposes, nullptr evaluates to zero (false).
+    case PT_PTR_CONSTANT:
+        return( true );
     case PT_INT_CONSTANT:
         if( NULL == Integral64Type( expr->type ) ) {
             return( expr->u.int_constant == 0 );
@@ -209,13 +215,17 @@ static bool zeroConstant(       // TEST IF NODE IS ZERO CONSTANT
     return( false );
 }
 
-
-static bool nonZeroExpr(        // TEST IF NODE IS NON-ZERO EXPRESSION
-    PTREE expr )                // - the expression
+/**
+ * Check if expression evaluates to a non-zero value.
+ *
+ * \param expr The expression to be evaluated.
+ */
+static bool nonZeroExpr( PTREE expr )
 {
     PTREE orig;
 
     switch( expr->op ) {
+    case PT_PTR_CONSTANT:
     case PT_INT_CONSTANT:
     case PT_FLOATING_CONSTANT:
         return ! zeroConstant( expr );
@@ -257,11 +267,17 @@ static bool foldable( PTREE expr )
         return( false );
     }
 
+    // We can fold some of the non-zero pointer occurrences.
+    if( expr->flags & PTF_PTR_NONZERO ) {
+        return( true );
+    }
+
     switch( expr->op ) {
-        case PT_INT_CONSTANT:
-        case PT_FLOATING_CONSTANT:
-            return( true );
-      default :
+    case PT_PTR_CONSTANT:
+    case PT_INT_CONSTANT:
+    case PT_FLOATING_CONSTANT:
+        return( true );
+    default :
         if( zeroConstant( expr ) ) {
             return( true );
         } else {
@@ -670,6 +686,11 @@ PTREE FoldUnary( PTREE expr )
         default:
             return( expr );
         }
+    }
+    // If we have a non-zero pointer expression, don't try to cast it
+    // or alter the unary expression.
+    if( expr->flags & PTF_PTR_NONZERO ) {
+        return( expr );
     }
     op1 = PTreeCopySrcLocation( op1, expr );
     PTreeFree( expr );
@@ -1179,23 +1200,24 @@ static PTREE FoldBinaryLeft( bool *has_folded,
     PTREE expr, PTREE op1, PTREE op2,
     bool has_decoration )
 {
-    DbgVerify( foldable( op1 ), "op1 must be foldable" );
-
-    *has_folded = false;
-
     PTREE op_t;
     PTREE op_f;
     PTREE *pchild1 = &expr->u.subtree[0];
     PTREE *pchild2 = &expr->u.subtree[1];
 
+    DbgVerify( foldable( op1 ), "op1 must be foldable" );
+
+    *has_folded = false;
+
     switch( expr->cgop ) {
     case CO_EQ:
         DbgVerify( !has_decoration, "FoldBinaryLeft -- bad ==" );
-
+        // NOTE: We must use zeroConstant on op2, as we don't know
+        // whether it is a constant expression or not (!nonZeroExpr may not be)
         if( zeroConstant( op2 ) && !hasSideEffects( op2 ) ) {
             *has_folded = true;
             // expr is true only if op1 is also zero.
-            expr = makeTrueFalse( expr, op2, zeroConstant( op1 ));
+            expr = makeTrueFalse( expr, op2, !nonZeroExpr( op1 ));
         }
         break;
     case CO_NE:
@@ -1204,7 +1226,7 @@ static PTREE FoldBinaryLeft( bool *has_folded,
         if( zeroConstant( op2 ) && !hasSideEffects( op2 ) ) {
             *has_folded = true;
             // expr is true only if op1 is not zero.
-            expr = makeTrueFalse( expr, op2, !zeroConstant( op1 ));
+            expr = makeTrueFalse( expr, op2, nonZeroExpr( op1 ));
         }
         break;
     case CO_AND_AND:
@@ -1212,7 +1234,7 @@ static PTREE FoldBinaryLeft( bool *has_folded,
         // Appy short-circuiting logic for &&.
 
 //          DbgVerify( has_decoration, "FoldBinary -- bad &&" );
-        if( ! zeroConstant( op1 ) ) {
+        if( nonZeroExpr( op1 ) ) {
             /* 1 && X => X (X is already boolean) */
             expr = pruneExpr( expr, pchild2, op2 );
         } else {
@@ -1224,7 +1246,7 @@ static PTREE FoldBinaryLeft( bool *has_folded,
         *has_folded = true;
         //Apply short-circuiting logic for ||.
 //          DbgVerify( has_decoration, "FoldBinary -- bad ||" );
-        if( zeroConstant( op1 ) ) {
+        if( !nonZeroExpr( op1 ) ) {
             /* 0 || X => X (X is already boolean) */
             expr = pruneExpr( expr, pchild2, op2 );
         } else {
@@ -1251,7 +1273,7 @@ static PTREE FoldBinaryLeft( bool *has_folded,
             op_t = op_t->u.subtree[1];
             op_f = op_f->u.subtree[1];
         }
-        if( ! zeroConstant( op1 ) ) {
+        if( nonZeroExpr( op1 ) ) {
             /* 1 ? T : F => T */
             if( has_decoration ) {
                 op2->u.subtree[0]->u.subtree[1] = NULL;
@@ -1270,6 +1292,7 @@ static PTREE FoldBinaryLeft( bool *has_folded,
         }
         op2 = PTreeCopySrcLocation( op2, expr );
         NodeFreeDupedExpr( expr );
+        *has_folded = true;
         return( op2 );
     }
 

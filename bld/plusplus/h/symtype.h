@@ -155,6 +155,7 @@ typedef enum {
     MSDS_THREAD         = 0x0008,
     MSDS_MODIFIER       = 0x0010,
     MSDS_NORETURN       = 0x0020,
+    MSDS_FARSS          = 0x0040,
     MSDS_NULL           = 0x0000
 } ms_declspec_t;
 
@@ -256,6 +257,7 @@ typedef enum {
     TYP_GENERIC         = 0x1c,
     TYP_TYPENAME        = 0x1d,
     TYP_FREE            = 0x1e,
+    TYP_NULLPTR         = 0x1f,
     TYP_MAX,
 
     TYP_FIRST_VALID     = TYP_BOOL,
@@ -280,6 +282,7 @@ typedef enum {
     TF1_EXPLICIT        = 0x00000200,
     TF1_NAKED           = 0x00000400,
     TF1_NORETURN        = 0x00000800,
+    TF1_FARSS           = 0x00001000,
     TF1_PLUSPLUS_SET    = 0x80000000,   /* note 1 */// don't change TF1_PLUSPLUS
     TF1_CONST           = 0x00000001,               // TYP_MODIFIER
     TF1_VOLATILE        = 0x00000002,

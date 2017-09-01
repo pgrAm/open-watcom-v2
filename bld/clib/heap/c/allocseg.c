@@ -82,8 +82,8 @@ __segment __AllocSeg( unsigned int amount )
     }
     /*        heapinfo + frl,  allocated blk,  end tags */
     amount += sizeof( heapblk ) + TAG_SIZE + TAG_SIZE * 2;
-    if( amount < _amblksiz )
-        amount = _amblksiz;
+    if( amount < _RWD_amblksiz )
+        amount = _RWD_amblksiz;
     num_of_paras = __ROUND_UP_SIZE_TO_PARA( amount );
     if( num_of_paras == 0 )
         num_of_paras = PARAS_IN_64K;
@@ -109,14 +109,6 @@ __segment __AllocSeg( unsigned int amount )
             GlobalFree( hmem );
             return( _NULLSEG );
         }
-  #if 0
-        /* code generator can't handle this */
-        if( FP_OFF( px ) != 0 ) {    /* in case, Microsoft changes Windows */
-            GlobalUnlock( hmem );   /* in post 3.1 versions */
-            GlobalFree( hmem );
-            return( _NULLSEG );
-        }
-  #endif
         seg = FP_SEG( px );
     }
 #else

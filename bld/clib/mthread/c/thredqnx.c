@@ -45,7 +45,7 @@
 #include "rterrno.h"
 
 
-extern  void            __qnx_exit( int __status );
+_WCNORETURN extern void     __qnx_exit( int __status );
 
 typedef struct thread_args {
     thread_fn   *rtn;
@@ -123,4 +123,5 @@ void __CEndThread( void )
 {
     __QNXRemoveThread();
     __qnx_exit( 0 );
+    // never return
 }

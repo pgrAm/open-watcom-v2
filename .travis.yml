@@ -4,14 +4,15 @@ compiler: gcc
 
 sudo: required
 
+dist: trusty
+
 env:
   global:
     - OWROOT=$TRAVIS_BUILD_DIR
-    - OWTOOLS=GCC
     - OWOBJDIR=binbuild
     - OWDOCBUILD=0
     - OWDOCQUIET=1
-    - OWUSE_FILENAME_VERSION=1
+#    - OWUSE_FILENAME_VERSION=1
     - OWBRANCH=master
     - OWBRANCH_COVERITY=coverity_scan
     - OWTRAVIS_REPO_SLUG=open-watcom/travis-ci-ow-builds
@@ -19,8 +20,9 @@ env:
 
 cache:
   directories:
-    - build/bin
-    - bld/watcom/binbuild
+    - build/$OWOBJDIR
+    - bld/watcom/$OWOBJDIR
+    - test
 
 before_script:
    # initialize OW build environment variables
@@ -55,6 +57,7 @@ jobs:
     - stage: Bootstrap
       os: linux
       install:
+        - export OWTOOLS=GCC
         - export OWTRAVISJOB=BOOTSTRAP
         - export OWDOCBUILD=0
         - export OWVERBOSE=1
@@ -62,6 +65,7 @@ jobs:
 #    - # ...
 #      os: osx
 #      install:
+#        - export OWTOOLS=GCC
 #        - export OWTRAVISJOB=BOOTSTRAP
 #        - export OWDOCBUILD=0
 #        - export OWVERBOSE=1
@@ -70,6 +74,7 @@ jobs:
     - stage: Build
       os: linux
       install:
+        - export OWTOOLS=GCC
         - export OWTRAVISJOB=BUILD
         - export OWDOCBUILD=0
         - export OWVERBOSE=0
@@ -79,6 +84,7 @@ jobs:
     - # ...
       os: linux
       install:
+        - export OWTOOLS=GCC
         - export OWTRAVISJOB=DOCPDF
         - export OWDOCBUILD=1
         - export OWVERBOSE=0
@@ -96,6 +102,43 @@ jobs:
 #        - brew install dosbox
 #        - export OWDOSBOX=dosbox
 #      script: travis/build.sh build
+    #################################
+    - stage: Test1
+      os: linux
+      install:
+        - export OWTOOLS=WATCOM
+        - export WATCOM=$OWROOT/test
+        - export PATH=$WATCOM/binl:$PATH
+        - export INCLUDE=$WATCOM/lh
+        - unset LIB
+        - export OWTRAVISJOB=TEST
+        - export OWDOCBUILD=0
+        - export OWVERBOSE=0
+      script: travis/test.sh
+    - stage: Test2
+      os: linux
+      install:
+        - export OWTOOLS=WATCOM
+        - export WATCOM=$OWROOT/test
+        - export PATH=$WATCOM/binl:$PATH
+        - export INCLUDE=$WATCOM/lh
+        - unset LIB
+        - export OWTRAVISJOB=TEST
+        - export OWDOCBUILD=0
+        - export OWVERBOSE=0
+      script: travis/test.sh cpp
+    - stage: Test3
+      os: linux
+      install:
+        - export OWTOOLS=WATCOM
+        - export WATCOM=$OWROOT/test
+        - export PATH=$WATCOM/binl:$PATH
+        - export INCLUDE=$WATCOM/lh
+        - unset LIB
+        - export OWTRAVISJOB=TEST
+        - export OWDOCBUILD=0
+        - export OWVERBOSE=0
+      script: travis/test.sh crtl
     #################################
     - stage: Finalize
       os: linux
