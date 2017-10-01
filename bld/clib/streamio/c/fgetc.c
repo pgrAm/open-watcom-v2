@@ -2,6 +2,7 @@
 *
 *                            Open Watcom Project
 *
+* Copyright (c) 2017-2017 The Open Watcom Contributors. All Rights Reserved.
 *    Portions Copyright (c) 1983-2002 Sybase, Inc. All Rights Reserved.
 *
 *  ========================================================================
@@ -31,6 +32,7 @@
 
 #include "variety.h"
 #include "widechar.h"
+#include <stddef.h>
 #include <stdio.h>
 #include <unistd.h>
 #ifndef __UNIX__
@@ -40,15 +42,19 @@
     #include <mbstring.h>
     #include <wchar.h>
 #endif
+#if defined( __OS2__ )
+    #include <wos2.h>
+#endif
 #include "rtdata.h"
 #include "rterrno.h"
 #include "fileacc.h"
 #include "qread.h"
 #include "orient.h"
-#include "flush.h"
+#include "flushall.h"
 #include "streamio.h"
 #include "thread.h"
 #include "fillbuf.h"
+
 
 #define DOS_EOF_CHAR        0x1a
 

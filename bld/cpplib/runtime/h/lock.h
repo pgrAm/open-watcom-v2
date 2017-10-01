@@ -2,6 +2,7 @@
 *
 *                            Open Watcom Project
 *
+* Copyright (c) 2017-2017 The Open Watcom Contributors. All Rights Reserved.
 *    Portions Copyright (c) 1983-2002 Sybase, Inc. All Rights Reserved.
 *
 *  ========================================================================
@@ -31,15 +32,17 @@
 
 
 #ifndef _LOCK_H_INCLUDED
+#define _LOCK_H_INCLUDED
+
 #ifdef __SW_BM
 
 #include "sema4.h"
 
-//#include <stddef.h>
 #define  __lock_first( __a, __b )  ((__a) < (__b) ? (__a) : (__b))
 #define  __lock_second( __a, __b ) ((__a) > (__b) ? (__a) : (__b))
 
 #if defined( __cplusplus )
+
 class _WPRTLINK __lock {
 public:
     __lock();
@@ -59,8 +62,9 @@ private:
     __fn_lock( __fn_lock const & );
     void operator =( __fn_lock const & );
 };
-#endif
 
-#endif
-#define _LOCK_H_INCLUDED
+#endif  /* __cplusplus */
+
+#endif  /* __SW_BM */
+
 #endif

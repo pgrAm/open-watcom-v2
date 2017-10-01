@@ -23,16 +23,8 @@ test_flags_386 = -mf
 test_flags_i86 = -mc
 test_flags_axp = 
 
-!ifneq targ_env_386 cw386
-!ifneq targ_env_386 d4g386
-stderr_check_386 = 2>>stderr.out
-!endif
-!endif
-stderr_check_axp = 2>>stderr.out
-
-!ifdef stderr_check_$(arch)
-sav_file_2 = x$(arch)_$(alt_error).sav
-!endif
+dos_exec_chk_i86 = execdos.chk
+dos_exec_chk_386 = execdos.chk
 
 !include testenv1.mif
 
@@ -85,29 +77,11 @@ stack_386=opt stack=32k
 stack_i86=opt stack=8k
 stack_axp=opt stack=32k
 
-test : .symbolic start clean start_test $(batch_sym) test.lnk $(exes) common_set_result_check
+test : .symbolic start clean start_test $(batch_sym) test.lnk $(exes) common_set_result
     @%make clean
-
-check_result : .procedure
-    -diff $(sav_file) exec.chk
-!ifdef sav_file_2
-    -diff $(sav_file_2) stderr.chk
-!endif
 
 start_test : .symbolic
     @%make common_start_test
-!ifdef sav_file_2
-    $(noecho)%create stderr.out
-!endif
-
-!ifdef sav_file_2
-save_sav_2 : .procedure
-    @if exist stderr.out @cp stderr.out $(sav_file_2) >$(nulldevice)
-    @if exist stderr.out @rm stderr.out
-
-clean_sav_2 : .procedure
-    @if exist $(sav_file_2) @rm $(sav_file_2)
-!endif
 
 !ifdef BATCH_TEST
 $(batch_lnk) : $(__MAKEFILES__)

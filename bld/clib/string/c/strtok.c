@@ -2,9 +2,8 @@
 *
 *                            Open Watcom Project
 *
-*    Portions Copyright (c) 1983-2002 Sybase, Inc. 
-*    Portions Copyright (c) 2015 Open Watcom contributors.
-*    All Rights Reserved.
+* Copyright (c) 2015-2017 The Open Watcom Contributors. All Rights Reserved.
+*    Portions Copyright (c) 1983-2002 Sybase, Inc. All Rights Reserved.
 *
 *  ========================================================================
 *
@@ -35,6 +34,9 @@
 #include "widechar.h"
 #include <stdio.h>
 #include <string.h>
+#if defined( __OS2__ )
+    #include <wos2.h>
+#endif
 #include "rtdata.h"
 #ifdef __WIDECHAR__
     #include "nextwtok.h"
@@ -46,12 +48,7 @@
 
 
 #ifdef __WIDECHAR__
-_WCRTLINK wchar_t *_ustrtok( wchar_t *str, const wchar_t *charset )
-{
-    return( wcstok( str, charset, NULL ) );
-}
-
-_WCRTLINK wchar_t *wcstok( wchar_t *str, const wchar_t *charset, wchar_t **ptr )    
+_WCRTLINK wchar_t *wcstok( wchar_t *str, const wchar_t *charset, wchar_t **ptr )
 {
     CHAR_TYPE           *p1;
     const CHAR_TYPE     *p2;
@@ -102,7 +99,7 @@ _WCRTLINK wchar_t *wcstok( wchar_t *str, const wchar_t *charset, wchar_t **ptr )
     } else {
         *ptr = NULL;
     }
-    
+
     return( str );
 }
 

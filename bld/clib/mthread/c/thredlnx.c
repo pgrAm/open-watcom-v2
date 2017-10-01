@@ -30,6 +30,7 @@
 
 
 #include "variety.h"
+#include <stdio.h>
 #include <string.h>
 #include <signal.h>
 #include <float.h>
@@ -39,12 +40,10 @@
 #include <semaphore.h>
 #include "rtdata.h"
 #include "liballoc.h"
-#include "extfunc.h"
 #include "linuxsys.h"
 #include "mthread.h"
 #include "cthread.h"
 
-#include <stdio.h>
 
 static volatile struct __lnx_tls_entry {
     pid_t    id;
@@ -55,7 +54,7 @@ static volatile struct __lnx_tls_entry {
 extern sem_t *__tls_sem;
 
 struct __lnx_thread {
-    thread_fn   *start_addr;
+    __thread_fn *start_addr;
     void        *args;
 };
 
@@ -84,8 +83,8 @@ void *__LinuxGetThreadData( void )
 
 void __LinuxSetThreadData( void *__data )
 {
-volatile struct __lnx_tls_entry *walker;
-volatile struct __lnx_tls_entry *previous;
+    volatile struct __lnx_tls_entry *walker;
+    volatile struct __lnx_tls_entry *previous;
 
     sem_wait( __tls_sem );
         walker = __tls;
@@ -163,13 +162,10 @@ int __CBeginThread( thread_fn *start_addr, void *stack_bottom,
         _RWD_errno = ENOMEM;
         return( -1 );
     }
-    thrdata->start_addr = start_addr;
+    thrdata->start_addr = (__thread_fn *)start_addr;
     thrdata->args = arglist;
 
-    pid = clone( (int(*)(void *))__cloned_lnx_start_fn,
-                 (void *)( (int)stack_bottom + stack_size ),
-                 flags,
-                 thrdata );
+    pid = clone( (int(*)(void *))__cloned_lnx_start_fn, (void *)( (int)stack_bottom + stack_size ), flags, thrdata );
 
     return( (int)pid );
 }

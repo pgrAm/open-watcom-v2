@@ -105,6 +105,7 @@ static const FMT_FLAG_INFO functionFlags[] = {
     { "__loadds ",      TF1_LOADDS },
     { "__saveregs ",    TF1_SAVEREGS },
     { "__interrupt ",   TF1_INTERRUPT },
+    { "__declspec(aborts) ", TF1_ABORTS },
     { "__declspec(noreturn) ", TF1_NORETURN },
     { "__declspec(farss) ", TF1_FARSS },
     { NULL,             TF1_NULL }
@@ -245,7 +246,7 @@ static void fmtTypeBased( TYPE type, VBUF *pvbuf )
 static void fmtNicePragma( AUX_INFO *pragma, VBUF *pvbuf )
 /********************************************************/
 {
-    char *id;
+    const char  *id;
 
     if( pragma == NULL ) {
         return;

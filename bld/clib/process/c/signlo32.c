@@ -2,6 +2,7 @@
 *
 *                            Open Watcom Project
 *
+* Copyright (c) 2017-2017 The Open Watcom Contributors. All Rights Reserved.
 *    Portions Copyright (c) 1983-2002 Sybase, Inc. All Rights Reserved.
 *
 *  ========================================================================
@@ -30,10 +31,12 @@
 
 
 #include "variety.h"
+#include <stddef.h>
 #include <stdio.h>
 #include <signal.h>
 #include <dos.h>
 #include <float.h>
+#include <wos2.h>
 #include "rtdata.h"
 #include "rtfpehdl.h"
 #include "rterrno.h"
@@ -45,6 +48,7 @@
 #include "sigtab.h"
 #include "initsig.h"
 #include "exitwmsg.h"
+#include "rtexcpt.h"
 
 
 unsigned        char    __ExceptionHandled;

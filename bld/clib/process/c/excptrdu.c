@@ -2,6 +2,7 @@
 *
 *                            Open Watcom Project
 *
+* Copyright (c) 2017-2017 The Open Watcom Contributors. All Rights Reserved.
 *    Portions Copyright (c) 1983-2002 Sybase, Inc. All Rights Reserved.
 *
 *  ========================================================================
@@ -30,6 +31,7 @@
 
 
 #include "variety.h"
+#include <stddef.h>
 #include <rdos.h>
 #include <excpt.h>
 #include <float.h>
@@ -43,6 +45,7 @@
 #include "thread.h"
 #include "initsig.h"
 #include "_xtoa.h"
+#include "rtexcpt.h"
 
 
 int __ReportException( EXCEPTION_POINTERS *rec );

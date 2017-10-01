@@ -581,6 +581,8 @@ static void DeclSpecifiers( bool *plain_int, decl_info *info )
                             } else {
                                 info->naked = true;
                             }
+                        } else if( CMPLIT( Buffer, "aborts" ) == 0 ) {
+                            modifier = FLAG_ABORTS;
                         } else if( CMPLIT( Buffer, "noreturn" ) == 0 ) {
                             modifier = FLAG_NORETURN;
                         } else if( CMPLIT( Buffer, "farss" ) == 0 ) {
@@ -602,6 +604,13 @@ static void DeclSpecifiers( bool *plain_int, decl_info *info )
                     }
                     if( modifier & MASK_LANGUAGES ) {
                         if( info->decl_mod & MASK_LANGUAGES ) {
+                            CErr1( ERR_INVALID_DECLSPEC );
+                        } else {
+                            info->decl_mod |= modifier;
+                        }
+                    }
+                    if( modifier & FLAG_ABORTS ) {
+                        if( info->decl_mod & FLAG_ABORTS ) {
                             CErr1( ERR_INVALID_DECLSPEC );
                         } else {
                             info->decl_mod |= modifier;
@@ -988,6 +997,9 @@ static bool CheckAdjModsTypeNode( type_modifiers old_mod, type_modifiers decl_mo
             adjust = true;
         }
     }
+    if( (decl_mod & FLAG_ABORTS) && (old_mod & FLAG_ABORTS) == 0 ) {
+        adjust = true;
+    }
     if( (decl_mod & FLAG_NORETURN) && (old_mod & FLAG_NORETURN) == 0 ) {
         adjust = true;
     }
@@ -1002,20 +1014,12 @@ void AdjModsTypeNode( TYPEPTR *ptyp, type_modifiers decl_mod, SYMPTR sym )
     if( decl_mod ) {
         TYPEPTR     typ;
 
-        typ = *ptyp;
-        while( ( typ->object != NULL ) && ( typ->decl_type == TYPE_POINTER ) ) {
-            ptyp = &typ->object;
-            typ = *ptyp;
-        }
-        if( sym == NULL ) {
-            if( typ->decl_type != TYPE_FUNCTION ) {
-                CErr1( ERR_INVALID_DECLSPEC );
-            }
-        } else {
+        if( sym != NULL ) {
             if( CheckAdjModsTypeNode( sym->mods, decl_mod ) ) {
                 sym->mods |= decl_mod;
             }
         }
+        typ = *ptyp;
         if( typ->decl_type == TYPE_FUNCTION ) {
             if( CheckAdjModsTypeNode( typ->u.fn.decl_flags, decl_mod ) ) {
                 *ptyp = FuncNode( typ->object, typ->u.fn.decl_flags | decl_mod, typ->u.fn.parms );

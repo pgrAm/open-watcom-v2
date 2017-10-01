@@ -2,6 +2,7 @@
 *
 *                            Open Watcom Project
 *
+* Copyright (c) 2017-2017 The Open Watcom Contributors. All Rights Reserved.
 *    Portions Copyright (c) 1983-2002 Sybase, Inc. All Rights Reserved.
 *
 *  ========================================================================
@@ -24,11 +25,26 @@
 *
 *  ========================================================================
 *
-* Description:  Prototype for __flush and __flushall internal routines.
+* Description:  Includes Operating System specific header files required
+*               for threads exception handling
 *
 ****************************************************************************/
 
-/* __flush is used by C++ run-time library */
-_WCRTLINK extern int    __flush( FILE * );
+#ifndef _OSEXCPT_H_INCLUDED
+#define _OSEXCPT_H_INCLUDED
 
-extern int              __flushall( int );
+#if !defined( _M_I86 )
+  #if defined(__NT__) || defined(__OS2__) || defined(__RDOS__)
+    #ifdef __SW_BM
+      #if defined(__NT__)
+        #include "ntexc.h"
+      #elif defined(__OS2__)
+        #include "os2exc.h"
+      #elif defined(__RDOS__)
+        #include "rdosexc.h"
+      #endif
+    #endif
+  #endif
+#endif
+
+#endif

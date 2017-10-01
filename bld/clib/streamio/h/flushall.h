@@ -24,33 +24,9 @@
 *
 *  ========================================================================
 *
-* Description:  Includes Operating System specific header files required
-*               for threads
+* Description:  Prototype for __flushall internal routines.
 *
 ****************************************************************************/
 
-#ifndef _OSTHREAD_H_INCLUDED
-#define _OSTHREAD_H_INCLUDED
 
-#if !defined( _M_I86 )
-  #if defined(__QNX__)
-  #elif defined(__LINUX__)
-  #elif defined(__NETWARE__)
-  #elif defined(__NT__) || defined(__OS2__) || defined(__RDOS__)
-    #ifdef __SW_BM
-      #if defined(__NT__)
-        #include "ntexc.h"
-      #elif defined(__OS2__)
-        #include "os2exc.h"
-      #elif defined(__RDOS__)
-        #include "rdosexc.h"
-      #endif
-      #define __XCPTHANDLER   (__THREADDATAPTR->xcpt_handler)
-    #else
-      extern struct _EXCEPTIONREGISTRATIONRECORD *__XcptHandler;
-      #define __XCPTHANDLER   __XcptHandler
-    #endif
-  #endif
-#endif
-
-#endif
+extern int              __flushall( int );
