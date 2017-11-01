@@ -53,6 +53,8 @@
 #elif defined( __RDOSDEV__ )
     #include <rdos.h>
     #include <rdosdev.h>
+#elif defined( __NETWARE__ )
+    #include "nw_lib.h"
 #endif
 #include "rtdata.h"
 #include "thrdreg.h"
@@ -67,7 +69,7 @@
 
 typedef struct thread_data_list {
     struct thread_data_list *next;
-    TID                     tid;
+    _TID                    tid;
     thread_data             *data;
     int                     allocated_entry;
 } thread_data_list;
@@ -79,7 +81,7 @@ thread_data *__GetThreadData( void )
 {
     thread_data     *tdata = NULL;
 #if defined( __OS2__ )
-    TID             tid;
+    _TID            tid;
 
     tid = GetCurrentThreadId();
     if( tid <= __MaxThreads ) {
@@ -155,7 +157,7 @@ thread_data *__GetThreadData( void )
 // realloc thread data
 thread_data *__ReallocThreadData( void )
 {
-    TID         tid;
+    _TID        tid;
     thread_data *tdata;
 
     _AccessTDList();
@@ -254,7 +256,7 @@ thread_data *__ReallocThreadData( void )
 }
 
 // add to list of thread data
-int __AddThreadData( TID tid, thread_data *tdata )
+int __AddThreadData( _TID tid, thread_data *tdata )
 {
     int                 retn = 1;
     thread_data_list    *tdl;
@@ -287,7 +289,7 @@ int __AddThreadData( TID tid, thread_data *tdata )
 }
 
 // remove from list of thread data
-void __RemoveThreadData( TID tid )
+void __RemoveThreadData( _TID tid )
 {
     thread_data_list *tdl;
     thread_data_list **pprev;

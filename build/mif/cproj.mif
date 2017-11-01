@@ -1,19 +1,37 @@
-!ifndef bootstrap
-!ifeq host_cpu x64
-!undef __WATCOM_TOOLS__
-!else ifeq host_cpu arm
-!undef __WATCOM_TOOLS__
-!else
-!define __WATCOM_TOOLS__
-!endif
-!endif
-
 # Perform basic sanity checks
 !ifeq host_os #nothing
 !error The host_os macro must be defined!
 !endif
 !ifeq host_cpu #nothing
 !error The host_cpu macro must be defined!
+!endif
+
+# use native tools for x64 cpu
+# skip build for unsupported platforms
+# undefine __WATCOM_TOOLS__ for OW build
+!ifeq host_cpu x64
+!ifneq bld_cpu x64
+skip_build: .SYMBOLIC
+!else ifndef bld64host_$(host_os)
+skip_build: .SYMBOLIC
+!else ifndef bootstrap
+!undef __WATCOM_TOOLS__
+!endif
+# use native tools for arm cpu
+# skip build for unsupported platforms
+# undefine __WATCOM_TOOLS__ for OW build
+!else ifeq host_cpu arm
+!ifneq bld_cpu arm
+skip_build: .SYMBOLIC
+!else ifndef bootstrap
+!undef __WATCOM_TOOLS__
+!endif
+# supported architectures
+# set __WATCOM_TOOLS__ for OW build
+!else
+!ifndef bootstrap
+__WATCOM_TOOLS__ = $(%OWBLDVERTOOL)
+!endif
 !endif
 
 # define OW build windows version for Win32 platform
@@ -25,6 +43,14 @@
 win32ver = $($(proj_name)_win32ver)
 !else
 win32ver = -DWINVER=0x400 -D_WIN32_IE=0x300
+!endif
+!endif
+
+# define newowtools macro to use new OW features
+#
+!ifdef __WATCOM_TOOLS__
+!ifeq __WATCOM_TOOLS__ $(%OWBLDVERTOOL)
+newowtools = 1
 !endif
 !endif
 
@@ -191,7 +217,7 @@ mode_clflags   += -"op nored"
 mode_cflags  += -x-wpx
 mode_clflags += -x-wpx
 !endif
-!if !defined( bootstrap ) || ( $(watcom_ver) > 1300 )
+!ifdef newowtools
 mode_cflags  += -xx -zam
 mode_clflags += -xx -zam
 !endif
@@ -360,12 +386,14 @@ cflags_dll_win  = -bd
 cflags_dll_os2  = -bd
 !endif
 
-!if !defined( bootstrap ) || ( $(watcom_ver) > 1290 )
+!ifdef newowtools
 c_flags          = -za99
-!else
-c_flags          =
 !endif
-cxx_flags        = $(extra_cxx_flags) $(extra_cxx_flags_$(host_cpu)) $(extra_cxx_flags_$(host_os))
+
+!ifdef __WATCOM_TOOLS__
+cxx_all          = -fzh -fzs
+!endif
+cxx_flags        = $(cxx_all) $(extra_cxx_flags) $(extra_cxx_flags_$(host_cpu)) $(extra_cxx_flags_$(host_os))
 
 proj_cpp_flags   = $(extra_cpp_flags) $(extra_cpp_flags_$(host_cpu)) $(extra_cpp_flags_$(host_os)) $(extra_cpp_flags_$(host_os)_$(host_cpu))
 cppflags         = $(cppflags_all) $(cppflags_$(host_cpu)) $(cppflags_$(host_os)) $(proj_cpp_flags)

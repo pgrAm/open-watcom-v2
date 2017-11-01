@@ -36,8 +36,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#if defined( __OS2__ )
+#if defined( __NT__ )
+    #include <windows.h>
+#elif defined( __OS2__ )
     #include <wos2.h>
+#elif defined(__NETWARE__)
+    #include "nw_lib.h"
 #endif
 #include "rtdata.h"
 #include "rterrno.h"
@@ -64,10 +68,9 @@
 */
 
 #if defined(__NETWARE__)
- #define getpid()       GetThreadID()
- extern int             GetThreadID( void );
+    #define getpid()       (unsigned)GetThreadID()
 #elif defined(__UNIX__)
- extern char *__tmpdir( char * );
+    extern char *__tmpdir( char * );
 #endif
 
 static CHAR_TYPE *__F_NAME(putbits,_wputbits)( CHAR_TYPE *p, unsigned val )

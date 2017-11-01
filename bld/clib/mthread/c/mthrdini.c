@@ -56,6 +56,8 @@
 #elif defined( __RDOSDEV__ )
     #include <rdos.h>
     #include <rdosdev.h>
+#elif defined( __NETWARE__ )
+    #include "nw_lib.h"
 #endif
 #include "rtdata.h"
 #include "stacklow.h"

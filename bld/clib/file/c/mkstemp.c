@@ -41,8 +41,12 @@
 #ifndef __UNIX__
     #include <process.h>
 #endif
-#if defined( __OS2__ )
+#if defined( __NT__ )
+    #include <windows.h>
+#elif defined( __OS2__ )
     #include <wos2.h>
+#elif defined( __NETWARE__ )
+    #include "nw_lib.h"
 #endif
 #include "rterrno.h"
 #include "thread.h"

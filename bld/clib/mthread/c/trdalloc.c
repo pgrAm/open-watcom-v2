@@ -52,6 +52,8 @@
 #elif defined( __RDOSDEV__ )
     #include <rdos.h>
     #include <rdosdev.h>
+#elif defined( __NETWARE__ )
+    #include "nw_lib.h"
 #endif
 #include "rtdata.h"
 #include "thread.h"
@@ -84,9 +86,9 @@ void *__InitThreadProcessing( void )
 
     __MaxThreads = __GetMaxThreads();
     __ThreadData = lib_calloc( __MaxThreads + 1, sizeof( *__ThreadData ) );
-  #ifdef __NETWARE__
+  #ifdef _NETWARE_CLIB
     if( __ThreadData != NULL ) {
-        __ThreadIDs = lib_calloc( __MaxThreads + 1, sizeof( int ) );
+        __ThreadIDs = lib_calloc( __MaxThreads + 1, sizeof( void * ) );
         if( __ThreadIDs == NULL ) {
             lib_free( __ThreadData );
         }

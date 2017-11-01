@@ -32,6 +32,7 @@
 
 
 #include "variety.h"
+#include <stddef.h>
 #if defined( __OS2__ )
     #define INCL_DOSSEMAPHORES
     #define INCL_DOSPROCESS
@@ -51,6 +52,8 @@
 #elif defined( __RDOSDEV__ )
     #include <rdos.h>
     #include <rdosdev.h>
+#elif defined( __NETWARE__ )
+    #include "nw_lib.h"
 #endif
 #include "rtdata.h"
 #include "thread.h"
