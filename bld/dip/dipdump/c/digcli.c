@@ -113,10 +113,7 @@ dig_fhandle DIGCLIENTRY( Open )( char const *name, dig_open mode )
     /* (ignore the remaining flags) */
 
     fd = open( name, flgs, PMODE_RWX );
-
     dprintf(( "DIGCliOpen: returns %d\n", fd ));
-    if( fd == -1 )
-        return( DIG_NIL_HANDLE );
     return( DIG_PH2FID( fd ) );
 }
 
@@ -279,12 +276,12 @@ void PathFini( void )
     free( FilePathList );
 }
 
-dig_fhandle DIGLoader( Open )( const char *name, size_t name_len, const char *ext, char *result, size_t max_result )
-/******************************************************************************************************************/
+FILE *DIGLoader( Open )( const char *name, size_t name_len, const char *ext, char *result, size_t max_result )
+/************************************************************************************************************/
 {
     char        realname[ _MAX_PATH2 ];
     char        *filename;
-    int         fd;
+    FILE        *fp;
 
     /* unused parameters */ (void)max_result;
 
@@ -295,34 +292,33 @@ dig_fhandle DIGLoader( Open )( const char *name, size_t name_len, const char *ex
         _makepath( realname, NULL, NULL, filename, ext );
     }
     filename = findFile( result, realname, FilePathList );
-    fd = -1;
+    fp = NULL;
     if( filename != NULL )
-        fd = open( filename, O_RDONLY );
-    if( fd == -1 )
-        return( DIG_NIL_HANDLE );
-    return( DIG_PH2FID( fd ) );
+        fp = fopen( filename, "rb" );
+    return( fp );
 }
 
-int DIGLoader( Read )( dig_fhandle fid, void *buff, unsigned len )
+int DIGLoader( Read )( FILE *fp, void *buff, size_t len )
 {
-    unsigned read_len;
-    read_len = read( DIG_FID2PH( fid ), buff, len );
+    size_t  read_len;
+
+    read_len = fread( buff, 1, len, fp );
 printf("read: in: %x  out: %x\n", len, read_len);
     return( read_len != len );
 }
 
-int DIGLoader( Seek )( dig_fhandle fid, unsigned long offs, dig_seek where )
+int DIGLoader( Seek )( FILE *fp, unsigned long offs, dig_seek where )
 {
-    unsigned long pos;
+    int     ret;
 
-    pos = lseek( DIG_FID2PH( fid ), offs, where );
-printf("seek: in: %lx  out: %lx\n", offs, pos);
-    return( pos == -1L );
+    ret = fseek( fp, offs, where );
+printf("seek: in: %lx  out: %d\n", offs, ret);
+    return( ret );
 }
 
-int DIGLoader( Close )( dig_fhandle fid )
+int DIGLoader( Close )( FILE *fp )
 {
-    return( close( DIG_FID2PH( fid ) ) != 0 );
+    return( fclose( fp ) );
 }
 
 #endif

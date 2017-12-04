@@ -31,9 +31,8 @@
 
 #ifndef _UIDEF_H_
 #define _UIDEF_H_
-#include <stddef.h>
 #include <stdlib.h>
-#include "bool.h"
+#include "stdui.h"
 
 #if defined( __WATCOMC__ )
   #define cdecl __cdecl
@@ -41,22 +40,11 @@
   #define cdecl
 #endif
 
-#ifndef HP
-    #ifndef MAXINT
-        #define         MAXINT                  0x7fff
-    #endif
-#endif
-
 #define         P_UNBUFFERED            0
 #define         P_DIALOGUE              1
 #define         P_MENU                  2
 #define         P_VSCREEN               3
 #define         P_BACKGROUND            4
-
-#ifdef _unused
-   #undef _unused
-#endif
-#define _unused(var)        var=var
 
 #if defined( TSR )
 
@@ -82,8 +70,6 @@
 
 #endif
 
-
-#include "stdui.h"
 
 #define         UIAPI
 #define         intern          /* near */
@@ -122,7 +108,6 @@ void            intern          frontwindow( UI_WINDOW * );
 unsigned int    intern          getkey( void );
 bool            intern          initbios( void );
 bool            intern          initkeyboard( void );
-bool            intern          initmonitor( void );
 bool            intern          installed( int );
 bool            intern          isdialogue( VSCREEN * );
 bool            intern          isscreen( BUFFER * );

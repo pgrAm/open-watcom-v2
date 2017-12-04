@@ -35,25 +35,14 @@
 #if !defined( _WIN64 ) && !defined( __WATCOMC__ ) && defined( __UNIX__ )
 #include <sys/types.h>
 #endif
+#include <stdio.h>
 
 /* The low level I/O routines named below will be passed a file handle by the */
 /* higher level I/O routines and which must be the file handle returned by one */
 /* of the file opening functions which will get it from the low level open */
 /* function */
 
-#if defined( _WIN64 )
-#define WRES_FID2PH(fid)    (((int)(unsigned __int64)(fid)) - 1)
-#define WRES_PH2FID(ph)     ((WResFileID)(unsigned __int64)((ph) + 1))
-#else
-#define WRES_FID2PH(fid)    (((int)(unsigned long)(fid)) - 1)
-#define WRES_PH2FID(ph)     ((WResFileID)(unsigned long)((ph) + 1))
-#endif
-#define WRES_FID2FH(fid)    ((FILE *)(fid))
-#define WRES_FH2FID(fh)     ((WResFileID)(fh))
-
-#define WRES_NIL_HANDLE     NULL
-
-typedef void                *WResFileID;
+typedef FILE                *WResFileID;
 #if defined( _WIN64 )
 typedef long                WResFileOffset;
 #elif !defined( __WATCOMC__ ) && defined( __UNIX__ )

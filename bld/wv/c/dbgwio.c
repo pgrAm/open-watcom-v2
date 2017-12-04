@@ -49,9 +49,6 @@
 #include "dbgwio.h"
 
 
-extern void             MemInitTypes( mad_type_kind mas, mem_type_walk_data *data );
-extern void             MemFiniTypes( mem_type_walk_data *data );
-
 #define PIECE_TYPE( x ) ( (x)-MENU_IO_FIRST_TYPE )
 
 static mem_type_walk_data       IOData;
@@ -84,7 +81,7 @@ typedef struct {
 #define WndIO( wnd ) ( (io_window *)WndExtra( wnd ) )
 
 
-static int IONumRows( a_window *wnd )
+OVL_EXTERN int IONumRows( a_window *wnd )
 {
     return( WndIO( wnd )->num_rows );
 }
@@ -105,7 +102,7 @@ static void IOAddNewAddr( a_window *wnd, address *addr, int type )
     curr->value_known = false;
 }
 
-static void     IOMenuItem( a_window *wnd, gui_ctl_id id, int row, int piece )
+OVL_EXTERN void     IOMenuItem( a_window *wnd, gui_ctl_id id, int row, int piece )
 {
     io_window   *io = WndIO( wnd );
     address     addr;
@@ -151,7 +148,7 @@ static void     IOMenuItem( a_window *wnd, gui_ctl_id id, int row, int piece )
         if( piece == PIECE_VALUE ) {
             old_radix = NewCurrRadix( IOData.info[curr->type].piece_radix );
             item.ud = curr->value_known ? curr->value.ud : 0;
-            ok = DlgMadTypeExpr( TxtBuff, &item, IOData.info[curr->type].type );
+            ok = DlgMadTypeExpr( TxtBuff, &item, IOData.info[curr->type].mth );
             if( ok ) {
                 curr->value = item;
                 curr->value_known = true;
@@ -168,14 +165,14 @@ static void     IOMenuItem( a_window *wnd, gui_ctl_id id, int row, int piece )
         break;
     case MENU_IO_READ:
         curr->value_known = true;
-        if( ItemGetMAD( &curr->addr, &curr->value, IT_IO, IOData.info[curr->type].type ) == IT_NIL ) {
+        if( ItemGetMAD( &curr->addr, &curr->value, IT_IO, IOData.info[curr->type].mth ) == IT_NIL ) {
             curr->value_known = false;
         }
         WndPieceDirty( wnd, row, PIECE_VALUE );
         break;
     case MENU_IO_WRITE:
         if( curr->value_known ) {
-            ItemPutMAD( &curr->addr, &curr->value, IT_IO, IOData.info[curr->type].type );
+            ItemPutMAD( &curr->addr, &curr->value, IT_IO, IOData.info[curr->type].mth );
         }
         break;
     default:
@@ -186,7 +183,7 @@ static void     IOMenuItem( a_window *wnd, gui_ctl_id id, int row, int piece )
 }
 
 
-static void     IOModify( a_window *wnd, int row, int piece )
+OVL_EXTERN void     IOModify( a_window *wnd, int row, int piece )
 {
     if( row < 0 ) {
         IOMenuItem( wnd, MENU_IO_NEW_ADDRESS, row, piece );
@@ -207,7 +204,7 @@ static void     IOModify( a_window *wnd, int row, int piece )
     }
 }
 
-static  bool    IOGetLine( a_window *wnd, int row, int piece, wnd_line_piece *line )
+OVL_EXTERN  bool    IOGetLine( a_window *wnd, int row, int piece, wnd_line_piece *line )
 {
     io_window   *io = WndIO( wnd );
 //    bool        ret;
@@ -239,7 +236,7 @@ static  bool    IOGetLine( a_window *wnd, int row, int piece, wnd_line_piece *li
         line->indent = 2 * MaxGadgetLength + 10 * WndMaxCharX( wnd );
         if( curr->value_known ) {
             max = TXT_LEN;
-            MADTypeHandleToString( new_radix, IOData.info[curr->type].type, &curr->value, TxtBuff, &max );
+            MADTypeHandleToString( new_radix, IOData.info[curr->type].mth, &curr->value, TxtBuff, &max );
         } else {
             for( i = 0; i < IOData.info[curr->type].item_width; ++i ) {
                 TxtBuff[i] = '?';
@@ -254,7 +251,7 @@ static  bool    IOGetLine( a_window *wnd, int row, int piece, wnd_line_piece *li
 }
 
 
-static void     IORefresh( a_window *wnd )
+OVL_EXTERN void     IORefresh( a_window *wnd )
 {
     WndNoSelect( wnd );
     WndRepaint( wnd );
@@ -298,7 +295,7 @@ void FiniIOWindow( void )
     MemFiniTypes( &IOData );
 }
 
-static bool IOEventProc( a_window * wnd, gui_event gui_ev, void *parm )
+OVL_EXTERN bool IOEventProc( a_window * wnd, gui_event gui_ev, void *parm )
 {
     io_window   *io = WndIO( wnd );
 
@@ -343,7 +340,7 @@ extern void IONewAddr( a_window *wnd, address *addr, int type )
 }
 
 
-extern a_window *DoWndIOOpen( address *addr, mad_type_handle type )
+extern a_window *DoWndIOOpen( address *addr, mad_type_handle mth )
 {
     io_window   *io;
     int         i;
@@ -355,9 +352,9 @@ extern a_window *DoWndIOOpen( address *addr, mad_type_handle type )
     io->num_rows = 1;
     io->list->addr = *addr;
     io->list->type = PIECE_TYPE( MENU_IO_FIRST_TYPE );
-    if( type != MAD_NIL_TYPE_HANDLE ) {
+    if( mth != MAD_NIL_TYPE_HANDLE ) {
         for( i = 0; i < IOData.num_types; i++ ) {
-            if( IOData.info[i].type == type ) {
+            if( IOData.info[i].mth == mth ) {
                 break;
             }
         }

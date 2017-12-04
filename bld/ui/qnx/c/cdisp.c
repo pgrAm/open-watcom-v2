@@ -52,6 +52,7 @@
 #include "qnxuiext.h"
 #include "ctkeyb.h"
 
+
 static MONITOR ui_data = {
     25,
     80,
@@ -98,7 +99,7 @@ static bool setupscrnbuff( void )
     num = UIData->width * UIData->height * 2;
     scrn = UIData->screen.origin;
 #if defined( __386__ )
-    scrn = realloc( scrn, num );
+    scrn = uirealloc( scrn, num );
     if( scrn == NULL )
         return( false );
 #else
@@ -130,7 +131,8 @@ static volatile int     StatePending;
 static void state_handler( int signo )
 /************************************/
 {
-    signo = signo;
+    /* unused parameters */ (void)signo;
+
     StatePending = 1;
 }
 
@@ -146,7 +148,7 @@ static EVENT cd_sizeevent( void )
         return( EV_NO_EVENT );
     StatePending = 0;
     state = console_state( UIConCtrl, UIConsole, 0,
-                (_CON_EVENT_ACTIVE|_CON_EVENT_INACTIVE|_CON_EVENT_SIZE) );
+                (_CON_EVENT_ACTIVE | _CON_EVENT_INACTIVE | _CON_EVENT_SIZE) );
     arm = 0;
     if( state & _CON_EVENT_INACTIVE ) {
         clear_shift();
@@ -155,7 +157,7 @@ static EVENT cd_sizeevent( void )
         arm = _CON_EVENT_INACTIVE;
     }
     console_arm( UIConCtrl, UIConsole, 0, arm | _CON_EVENT_SIZE );
-    if( !(state & _CON_EVENT_SIZE) )
+    if( (state & _CON_EVENT_SIZE) == 0 )
         return( EV_NO_EVENT );
     if( !uiinlists( EV_BACKGROUND_RESIZE ) )
         return( EV_NO_EVENT );
@@ -171,7 +173,7 @@ static EVENT cd_sizeevent( void )
     return( EV_BACKGROUND_RESIZE );
 }
 
-bool intern initmonitor( void )
+static bool initmonitor( void )
 /*****************************/
 {
     struct _osinfo      info;
@@ -205,7 +207,7 @@ bool intern initmonitor( void )
     /* notify if screen size changes */
     signal( SIGDEV, &state_handler );
     console_arm( UIConCtrl, UIConsole, 0,
-            _CON_EVENT_SIZE|_CON_EVENT_ACTIVE|_CON_EVENT_SIZE );
+            _CON_EVENT_SIZE | _CON_EVENT_ACTIVE | _CON_EVENT_SIZE );
 
     return( true );
 }
@@ -213,8 +215,15 @@ bool intern initmonitor( void )
 
 /* update the physical screen with contents of virtual copy */
 
-static void my_console_write( struct _console_ctrl *cc, int console, unsigned offset,
-         unsigned char __FAR *buf, int nbytes, int row, int col, int type)
+static void my_console_write(
+    struct _console_ctrl    *cc,
+    int                     console,
+    unsigned                offset,
+    LP_STRING               buf,
+    int                     nbytes,
+    int                     row,
+    int                     col,
+    int                     type )
 {
         struct _mxfer_entry sx[2];
         struct _mxfer_entry rx;
@@ -233,7 +242,7 @@ static void my_console_write( struct _console_ctrl *cc, int console, unsigned of
         msg.write.nbytes = nbytes;
 
         _setmx( &sx[1], buf, nbytes );
-        _setmx( &sx[0], &msg.write, sizeof(msg.write)-sizeof(msg.write.data) );
+        _setmx( &sx[0], &msg.write, sizeof( msg.write ) - sizeof( msg.write.data ) );
 
         _setmx( &rx, &msg.write_reply, sizeof( msg.write_reply ) );
 
@@ -244,7 +253,7 @@ static void my_console_write( struct _console_ctrl *cc, int console, unsigned of
 static int cd_init( void )
 /************************/
 {
-    int                 initialized;
+    int         initialized;
 
     initialized = false;
     if( UIData == NULL ) {
@@ -295,19 +304,20 @@ static int cd_update( SAREA *area )
                         row, col, type );
     } else {
         count = area->width * sizeof( PIXEL );
-        for( i = area->row; i < (area->row + area->height); i++ ) {
+        for( i = area->row; i < ( area->row + area->height ); i++ ) {
             offset = ( i * UIData->width + area->col ) * sizeof( PIXEL );
             my_console_write( UIConCtrl, UIConsole, offset,
-                            offset + (LP_STRING)UIData->screen.origin, count,
+                            (LP_STRING)UIData->screen.origin + offset, count,
                             row, col, type );
         }
     }
     return( 0 );
 }
 
-static int cd_refresh(int must)
+static int cd_refresh( int must )
 {
-    must = must;
+    /* unused parameters */ (void)must;
+
     return( 0 );
 }
 
@@ -325,7 +335,8 @@ static int cd_getcur( ORD *row, ORD *col, CURSOR_TYPE *type, int *attr )
 static int cd_setcur( ORD row, ORD col, CURSOR_TYPE typ, int attr )
 /*****************************************************************/
 {
-    attr = attr;
+    /* unused parameters */ (void)attr;
+
     if( ( typ != UIData->cursor_type ) ||
         ( row != UIData->cursor_row ) ||
         ( col != UIData->cursor_col ) ) {
@@ -338,7 +349,7 @@ static int cd_setcur( ORD row, ORD col, CURSOR_TYPE typ, int attr )
     return( 0 );
 }
 
-EVENT cd_event( void )
+static EVENT cd_event( void )
 {
     EVENT       ev;
 

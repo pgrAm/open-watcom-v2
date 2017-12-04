@@ -58,7 +58,7 @@ bool UIAPI uiset80col( void )
     return( true );
 }
 
-bool intern initmonitor( void )
+static bool initmonitor( void )
 /*****************************/
 {
     WORD height, width;
@@ -106,9 +106,7 @@ bool intern initbios( void )
 
     if( initmonitor() ) {
 
-        UIData->screen.origin = (LPPIXEL) uimalloc(
-            UIData->width * UIData->height * sizeof( PIXEL )
-        );
+        UIData->screen.origin = (LPPIXEL)uimalloc( UIData->width * UIData->height * sizeof( PIXEL ) );
 
         for( i = 0 ; i < UIData->width * UIData->height ; ++i ){
             UIData->screen.origin[i].ch = ' ';

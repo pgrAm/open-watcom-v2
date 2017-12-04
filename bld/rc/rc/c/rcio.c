@@ -105,7 +105,7 @@ static bool Pass1InitRes( void )
 
     /* open the temporary file */
     CurrResFile.fid = ResOpenNewFile( CurrResFile.filename );
-    if( CurrResFile.fid == WRES_NIL_HANDLE ) {
+    if( CurrResFile.fid == NULL ) {
         RcError( ERR_OPENING_TMP, CurrResFile.filename, LastWresErrStr() );
         CurrResFile.IsOpen = false;
         return( true );
@@ -381,7 +381,7 @@ static bool OpenResFileInfo( ExeType type )
         Pass2Info.ResFile->next = NULL;
         Pass2Info.ResFile->name = NULL;
         Pass2Info.ResFile->IsOpen = false;
-        Pass2Info.ResFile->fid = WRES_NIL_HANDLE;
+        Pass2Info.ResFile->fid = NULL;
         Pass2Info.ResFile->Dir = NULL;
         return( true );
     }
@@ -412,7 +412,7 @@ static bool openExeFileInfoRO( const char *filename, ExeFileInfo *info )
     exe_pe_header   *pehdr;
 
     info->fid = ResOpenFileRO( filename );
-    if( info->fid == WRES_NIL_HANDLE ) {
+    if( info->fid == NULL ) {
         RcError( ERR_CANT_OPEN_FILE, filename, strerror( errno ) );
         return( false );
     }
@@ -471,7 +471,7 @@ static bool openNewExeFileInfo( char *filename, ExeFileInfo *info )
 /******************************************************************/
 {
     info->fid = ResOpenNewFile( filename );
-    if( info->fid == WRES_NIL_HANDLE ) {
+    if( info->fid == NULL ) {
         RcError( ERR_OPENING_TMP, filename, strerror( errno ) );
         return( false );
     }
@@ -712,12 +712,12 @@ static bool OpenPhysicalFile( PhysFileInfo *phys )
 {
     if( !phys->IsOpen ) {
         phys->fid = RcIoOpenInput( phys->Filename, true );
-        if( phys->fid == WRES_NIL_HANDLE ) {
+        if( phys->fid == NULL ) {
             RcError( ERR_CANT_OPEN_FILE, phys->Filename, strerror( errno ) );
             return( true );
         }
         phys->IsOpen = true;
-        if( fseek( WRES_FID2FH( phys->fid ), phys->Offset, SEEK_SET ) == -1 ) {
+        if( fseek( phys->fid, phys->Offset, SEEK_SET ) == -1 ) {
             RcError( ERR_READING_FILE, phys->Filename, strerror( errno ) );
             return( true );
         }
@@ -746,7 +746,7 @@ static void SetPhysFileOffset( FileStack * stack )
     if( !IsEmptyFileStack( *stack ) ) {
         phys = &(stack->Current->Physical);
         charsinbuff = stack->BufferSize - ( stack->NextChar - stack->Buffer );
-        phys->Offset = ftell( WRES_FID2FH( phys->fid ) ) - charsinbuff;
+        phys->Offset = ftell( phys->fid ) - charsinbuff;
     }
 } /* SetPhysFileOffset */
 
@@ -766,7 +766,7 @@ static bool ReadBuffer( FileStack * stack )
         }
     }
     if( CmdLineParms.NoPreprocess ) {
-        numread = fread( stack->Buffer, 1, stack->BufferSize, WRES_FID2FH( phys->fid ) );
+        numread = fread( stack->Buffer, 1, stack->BufferSize, phys->fid );
     } else {
         for( numread = 0; numread < stack->BufferSize; numread++ ) {
             inchar = PP_Char();
@@ -834,7 +834,7 @@ static void ClosePhysicalFile( PhysFileInfo * phys )
 /**************************************************/
 {
     if( phys->IsOpen ) {
-        fclose( WRES_FID2FH( phys->fid ) );
+        fclose( phys->fid );
         phys->IsOpen = false;
     }
 } /* ClosePhysicalFile */
@@ -1000,11 +1000,11 @@ WResFileID RcIoOpenInput( const char *filename, bool text_mode )
     bool                no_handles_available;
 
     if( text_mode ) {
-        fid = WRES_FH2FID( fopen( filename, "rt" ) );
+        fid = fopen( filename, "rt" );
     } else {
         fid = ResOpenFileRO( filename );
     }
-    no_handles_available = ( fid == WRES_NIL_HANDLE && errno == EMFILE );
+    no_handles_available = ( fid == NULL && errno == EMFILE );
     if( no_handles_available ) {
         /* set currfile to be the first (not before first) entry */
         /* close open files except the current input file until able to open */
@@ -1013,11 +1013,11 @@ WResFileID RcIoOpenInput( const char *filename, bool text_mode )
             if( currfile->Physical.IsOpen ) {
                 ClosePhysicalFile( &(currfile->Physical) );
                 if( text_mode ) {
-                    fid = WRES_FH2FID( fopen( filename, "rt" ) );
+                    fid = fopen( filename, "rt" );
                 } else {
                     fid = ResOpenFileRO( filename );
                 }
-                no_handles_available = ( fid == WRES_NIL_HANDLE && errno == EMFILE );
+                no_handles_available = ( fid == NULL && errno == EMFILE );
             }
        }
     }

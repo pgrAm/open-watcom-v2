@@ -60,9 +60,6 @@
 
 
 extern bool             DlgDataAddrFormat( char *, void *, void (*fmt)(void*,char*));
-extern void             MemFiniTypes( mem_type_walk_data *data );
-extern void             MemInitTypes( mad_type_kind mas, mem_type_walk_data *data );
-
 
 typedef gui_ord (MEMHEADER)(a_window *,int);
 
@@ -117,22 +114,22 @@ typedef struct mem_window {
             unsigned long   size;
         } f;
     } u;
-    unsigned    curr_offset;
-    unsigned    items_per_line;
-    unsigned    item_size;
-    unsigned    item_width;
-    unsigned    total_size;
-    int         piece_type;
-    int         last_type_popup;
-    gui_ord     address_end;
-    long        bp_offset;
-    long        sp_offset;
-    wnd_row     cursor_row;
-    int         cursor_piece;
-    int         shadow_piece;
-    mad_type_handle init_type;      //MAD: what if active MAD changes?
-    bool        file    : 1;
-    bool        stack   : 1;
+    unsigned        curr_offset;
+    unsigned        items_per_line;
+    unsigned        item_size;
+    unsigned        item_width;
+    unsigned        total_size;
+    int             piece_type;
+    int             last_type_popup;
+    gui_ord         address_end;
+    long            bp_offset;
+    long            sp_offset;
+    wnd_row         cursor_row;
+    int             cursor_piece;
+    int             shadow_piece;
+    mad_type_handle init_mth;      //MAD: what if active MAD changes?
+    bool            file    : 1;
+    bool            stack   : 1;
 } mem_window;
 
 #define WndMem( wnd ) ( (mem_window *)WndExtra( wnd ) )
@@ -175,7 +172,7 @@ static unsigned MemCurrOffset( a_window *wnd )
     return( ( curr_row * mem->items_per_line + curr_piece ) * mem->item_size );
 }
 
-static gui_ord MemHeader( a_window *wnd, int piece )
+OVL_EXTERN gui_ord MemHeader( a_window *wnd, int piece )
 {
     address     addr;
     mem_window  *mem;
@@ -210,7 +207,7 @@ static gui_ord MemHeader( a_window *wnd, int piece )
 }
 
 
-static gui_ord BinHeader( a_window *wnd, int piece )
+OVL_EXTERN gui_ord BinHeader( a_window *wnd, int piece )
 {
     mem_window  *mem;
 
@@ -272,7 +269,7 @@ static void MemSetStartAddr( a_window *wnd, address addr, bool new_home )
     MemGetContents( wnd, false );
 }
 
-static  void MemRefresh( a_window *wnd )
+OVL_EXTERN  void MemRefresh( a_window *wnd )
 {
     mem_window  *mem;
 
@@ -411,7 +408,7 @@ static  void    MemUpdateCursor( a_window *wnd )
 }
 
 
-static  void    MemModify( a_window *wnd, int row, int piece )
+OVL_EXTERN  void    MemModify( a_window *wnd, int row, int piece )
 {
     address     addr;
     union {
@@ -444,7 +441,7 @@ static  void    MemModify( a_window *wnd, int row, int piece )
             ChangeMemUndoable( addr, &item, strlen( item.str ) );
         }
     } else {
-        if( DlgMadTypeExpr( TxtBuff, &item.i, MemData.info[mem->piece_type].type ) ) {
+        if( DlgMadTypeExpr( TxtBuff, &item.i, MemData.info[mem->piece_type].mth ) ) {
             ChangeMemUndoable( addr, &item, item_size );
         }
     }
@@ -611,7 +608,7 @@ static void SetBreakWrite( a_window *wnd )
     mem = WndMem( wnd );
     addr = AddrAddWrap( mem->u.m.addr, MemCurrOffset( wnd ) );
     StrAddr( &addr, buff, TXT_LEN );
-    if( !BreakWrite( addr, MemData.info[mem->piece_type].type, buff ) ) {
+    if( !BreakWrite( addr, MemData.info[mem->piece_type].mth, buff ) ) {
         Error( ERR_NONE, LIT_ENG( ERR_NOT_WATCH_SIZE ) );
     }
 }
@@ -638,7 +635,7 @@ static bool GetBuff( mem_window *mem, unsigned long offset, char *buff, size_t s
     }
 }
 
-static  bool    MemGetLine( a_window *wnd, int row, int piece, wnd_line_piece *line )
+OVL_EXTERN  bool    MemGetLine( a_window *wnd, int row, int piece, wnd_line_piece *line )
 {
     char            buff[16];
     unsigned long   offset;
@@ -746,7 +743,7 @@ static  bool    MemGetLine( a_window *wnd, int row, int piece, wnd_line_piece *l
         new_radix = MemData.info[mem->piece_type].piece_radix;
         old_radix = NewCurrRadix( new_radix );
         max = TXT_LEN;
-        MADTypeHandleToString( new_radix, MemData.info[mem->piece_type].type, &buff, TxtBuff, &max );
+        MADTypeHandleToString( new_radix, MemData.info[mem->piece_type].mth, &buff, TxtBuff, &max );
         NewCurrRadix( old_radix );
     }
     return( true );
@@ -783,7 +780,7 @@ static void MemResize( a_window *wnd )
     MemRefresh( wnd );
 }
 
-static void     MemMenuItem( a_window *wnd, gui_ctl_id id, int row, int piece )
+OVL_EXTERN void     MemMenuItem( a_window *wnd, gui_ctl_id id, int row, int piece )
 {
     mem_window  *mem;
 
@@ -871,14 +868,14 @@ static void     MemMenuItem( a_window *wnd, gui_ctl_id id, int row, int piece )
     }
 }
 
-static  void StkRefresh( a_window *wnd )
+OVL_EXTERN  void StkRefresh( a_window *wnd )
 {
     MemSetStartAddr( wnd, Context.stack, true );
     WndZapped( wnd );
 }
 
 
-static  int     MemScroll( a_window *wnd, int lines )
+OVL_EXTERN  int     MemScroll( a_window *wnd, int lines )
 {
     int             tomove;
     unsigned long   offset;
@@ -953,7 +950,7 @@ void FiniMemWindow( void )
     MemFiniTypes( &MemData );
 }
 
-static bool MemEventProc( a_window * wnd, gui_event gui_ev, void *parm )
+OVL_EXTERN bool MemEventProc( a_window * wnd, gui_event gui_ev, void *parm )
 {
     mem_window      *mem;
     int             i;
@@ -963,10 +960,10 @@ static bool MemEventProc( a_window * wnd, gui_event gui_ev, void *parm )
     mem = WndMem( wnd );
     switch( gui_ev ) {
     case GUI_INIT_WINDOW:
-        if( mem->init_type != MAD_NIL_TYPE_HANDLE ) {
+        if( mem->init_mth != MAD_NIL_TYPE_HANDLE ) {
             mem->piece_type = MemByteType;
             for( i = 0; i < MemData.num_types; i++ ) {
-                if( MemData.info[i].type == mem->init_type ) {
+                if( MemData.info[i].mth == mem->init_mth ) {
                     break;
                 }
             }
@@ -1067,7 +1064,7 @@ wnd_info StkInfo = {
     DefPopUp( MemMenu )
 };
 
-extern  a_window        *DoWndMemOpen( address addr, mad_type_handle type )
+extern  a_window        *DoWndMemOpen( address addr, mad_type_handle mth )
 {
     mem_window  *mem;
     a_window    *wnd;
@@ -1079,7 +1076,7 @@ extern  a_window        *DoWndMemOpen( address addr, mad_type_handle type )
     SetDataDot( addr );
     mem->file = false;
     mem->stack = false;
-    mem->init_type = type;
+    mem->init_mth = mth;
     mem->piece_type = MemByteType;
     wnd = DbgTitleWndCreate( MemGetTitle( mem ), &MemInfo, WND_MEMORY, mem, &MemIcon, TITLE_SIZE, false );
     return( wnd );
@@ -1099,7 +1096,7 @@ a_window        *WndStkOpen( void )
     mem = WndMustAlloc( sizeof( mem_window ) );
     mem->u.m.addr = mem->u.m.home = Context.stack;
     mem->u.m.contents = NULL;
-    mem->init_type = GetMADTypeHandleDefaultAt( Context.stack, MTK_INTEGER );
+    mem->init_mth = GetMADTypeHandleDefaultAt( Context.stack, MTK_INTEGER );
     mem->file = false;
     mem->stack = true;
     wnd = DbgTitleWndCreate( LIT_DUI( WindowStack ), &StkInfo, WND_STACK, mem, &StkIcon, TITLE_SIZE, false );
@@ -1115,7 +1112,7 @@ a_window        *DoWndBinOpen( const char *title, file_handle fh )
     mem = WndMustAlloc( sizeof( mem_window ) );
     mem->file = true;
     mem->stack = false;
-    mem->init_type = MAD_NIL_TYPE_HANDLE;
+    mem->init_mth = MAD_NIL_TYPE_HANDLE;
     mem->piece_type = MemByteType;
     mem->u.f.fh = fh;
     wnd = DbgTitleWndCreate( title, &BinInfo, WND_BINARY, mem, &MemIcon, TITLE_SIZE, false );

@@ -33,9 +33,10 @@
 
 #include "vi.h"
 #include <dos.h>
+#include <curses.h>
 #include "win.h"
 #include "dosx.h"
-#include "curses.h"
+
 
 #define PHAR_SCRN_SEL   0x34
 extern int PageCnt;
@@ -280,7 +281,7 @@ void MyDelay( int ms )
  */
 void SetCursorBlinkRate( int cbr )
 {
-    CursorBlinkRate = cbr;
+    EditVars.CursorBlinkRate = cbr;
 
 } /* SetCursorBlinkRate */
 

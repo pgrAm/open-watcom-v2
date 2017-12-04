@@ -2,6 +2,7 @@
 *
 *                            Open Watcom Project
 *
+* Copyright (c) 2017-2017 The Open Watcom Contributors. All Rights Reserved.
 *    Portions Copyright (c) 1983-2002 Sybase, Inc. All Rights Reserved.
 *
 *  ========================================================================
@@ -47,13 +48,12 @@
 #include <unistd.h>
 #include <string.h>
 #include <i86.h>
-#include <term.h>
+#include "wterm.h"
 #include "uidef.h"
 #include "uivirt.h"
 #include "qnxuiext.h"
 #include "qdebug.h"
 #include "uiproxy.h"
-#include "ctkeyb.h"
 
 
 extern PossibleDisplay      DisplayList[];
@@ -128,36 +128,32 @@ bool intern initbios( void )
         char        *p2;
 
         p1 = GetTermType();
-        p2 = malloc( strlen( p1 ) + 1 );
+        p2 = uimalloc( strlen( p1 ) + 1 );
         strcpy( p2, p1 );
-        __setupterm( p2, UIConHandle, &error );
-        free( p2 );
+        setupterm( p2, UIConHandle, &error );
+        uifree( p2 );
     }
     if( error != 1 )
         return( false );
     // Check to make sure terminal is suitable
-    if( (cursor_address[0] == '\0') || hard_copy ) {
-        __del_curterm( __cur_term );
+    if( ( cursor_address[0] == '\0' ) || hard_copy ) {
+        del_curterm( cur_term );
         return( false );
     }
 
-    curr = DisplayList;
-
-    for( ;; ) {
-        if( curr->check == NULL )
-            return( false );
-        if( curr->check() )
-            break;
-        ++curr;
+    for( curr = DisplayList; curr->check != NULL; curr++ ) {
+        if( curr->check() ) {
+            UIVirt = curr->virt;
+            return( _uibiosinit() );
+        }
     }
-    UIVirt = curr->virt;
-    return( _uibiosinit() );
+    return( false );
 }
 
 void intern finibios( void )
 {
     _uibiosfini();
-    __del_curterm( __cur_term );
+    del_curterm( cur_term );
 }
 
 static unsigned RefreshForbid = 0;
@@ -169,10 +165,10 @@ void forbid_refresh( void )
 
 void permit_refresh( void )
 {
-    if( RefreshForbid ){
+    if( RefreshForbid ) {
         RefreshForbid--;
     }
-    if( !RefreshForbid ){
+    if( !RefreshForbid ) {
         _ui_refresh( 0 );
     }
 }
@@ -180,7 +176,7 @@ void permit_refresh( void )
 void intern physupdate( SAREA *area )
 {
     _physupdate( area );
-    if( !RefreshForbid ){
+    if( !RefreshForbid ) {
         _ui_refresh( 0 );
     }
 }
@@ -190,7 +186,7 @@ void intern physupdate( SAREA *area )
 #include <stdio.h>
 #include <stdarg.h>
 
-void QNXDebugPrintf(const char *f, ...)
+void QNXDebugPrintf( const char *f, ... )
 {
     static FILE *file = NULL;
     va_list vargs;

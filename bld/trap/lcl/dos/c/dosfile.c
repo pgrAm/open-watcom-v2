@@ -36,14 +36,14 @@
 #include "dosver.h"
 #include "trpimp.h"
 #include "trpcomm.h"
-#include "doscomm.h"
 #include "dosenv.h"
 #include "doschk.h"
 #include "dosextx.h"
 #include "dosfile.h"
 
 
-extern tiny_ret_t       Fork( const char __far *, unsigned );
+/* fork.asm prototype */
+extern tiny_ret_t   __near Fork( const char __far *, unsigned );
 
 const char DosExtList[] = DOSEXTLIST;
 
@@ -59,8 +59,8 @@ trap_retval ReqFile_get_config( void )
     ret->file.path_separator[0] = '\\';
     ret->file.path_separator[1] = '/';
     ret->file.path_separator[2] = ':';
-    ret->file.newline[0] = '\r';
-    ret->file.newline[1] = '\n';
+    ret->file.line_eol[0] = '\r';
+    ret->file.line_eol[1] = '\n';
     return( sizeof( *ret ) );
 }
 

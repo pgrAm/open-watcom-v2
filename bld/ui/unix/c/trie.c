@@ -2,6 +2,7 @@
 *
 *                            Open Watcom Project
 *
+* Copyright (c) 2017-2017 The Open Watcom Contributors. All Rights Reserved.
 *    Portions Copyright (c) 1983-2002 Sybase, Inc. All Rights Reserved.
 *
 *  ========================================================================
@@ -29,7 +30,6 @@
 ****************************************************************************/
 
 
-#include "walloca.h"
 #include <sys/types.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -39,13 +39,26 @@
 #include <fcntl.h>
 #include <assert.h>
 #include <ctype.h>
+#ifdef __QNX__
+#include <sys/kernel.h>
+#include <sys/dev.h>
+#include <sys/sidinfo.h>
+#include <sys/psinfo.h>
+#include <sys/proxy.h>
+#include <sys/qioctl.h>
+#include <sys/console.h>
+#endif
+#include "walloca.h"
 #include "uidef.h"
 #include "uishift.h"
-
 #include "uivirt.h"
-#include "unxuiext.h"
-#include "trie.h"
 #include "ctkeyb.h"
+#ifdef __QNX__
+#include "qnxuiext.h"
+#else
+#include "unxuiext.h"
+#endif
+#include "trie.h"
 
 
 /* The following types are for use with the keymap-trie. The keymap trie
@@ -54,7 +67,7 @@
  * key-lookup.
  */
 
-#define EV_UNUSED ((EVENT)-1)
+#define EV_UNUSED               ((EVENT)-1)
 
 #define TRIE_ARRAY_GROWTH       4
 
@@ -78,7 +91,7 @@ int             KeyTrieDepth = 1;
 
 static eTrie    KeyTrie;
 
-int TrieInit( void )
+bool TrieInit( void )
 {
 
     KeyTrie.child = uimalloc( TRIE_TOP * sizeof( eNode ) );
@@ -134,7 +147,7 @@ static int child_search( char key, eTrie *trie )
         return( 0 );
 
     ary = trie->child;
-    if( key > ary[num - 1].c )
+    if( key>ary[num - 1].c )
         return( num );
 
     for( x = 0; x < num; x++ ) {
@@ -151,7 +164,7 @@ static int child_search( char key, eTrie *trie )
  * to improve the performance, but I think any improvements would be slight,
  * as this function is only called at initialization.
  */
-int TrieAdd( EVENT event, const char *str )
+bool TrieAdd( EVENT event, const char *str )
 {
     eTrie       *trie = &KeyTrie;
     int         i;
@@ -183,7 +196,7 @@ int TrieAdd( EVENT event, const char *str )
             if( i < ( trie->num_child - 1 ) ) {
                 // We're in the middle of the list, so clear a spot
                 memmove( &(trie->child[i + 1]), &(trie->child[i]),
-                                ( trie->num_child - i - 1 ) * sizeof( eNode ) );
+                                (trie->num_child-i-1)*sizeof(eNode) );
             }
 
             trie->child[i].c = *str;
@@ -229,25 +242,27 @@ static int child_comp( const int *pkey, const eNode *pbase )
 EVENT TrieRead( void )
 {
     eTrie           *trie;
-    unsigned char   *buf;
+    char            *buf;
     int             c;
-    int             cpos = 0;
+    size_t          cpos = 0;
     EVENT           ev = EV_UNUSED;
-    int             ev_pos = 0;
+    size_t          ev_pos = 0;
     eNode           *node;
     int             timeout;
 
-    buf = alloca( KeyTrieDepth + 1 );
+    buf = walloca( KeyTrieDepth + 1 );
 
     trie = &KeyTrie;
     buf[0] = '\0';
     timeout = 0;
     for( ;; ) {
-        c = nextc( timeout );
+        c = nextc(timeout);
         if( c <= 0 )
             break;
+#ifdef __UNIX__
         if( c == 256 )
             return( EV_MOUSE_PRESS );
+#endif
         buf[cpos++] = c;
 
         if( trie->num_child == 0 )
@@ -266,7 +281,7 @@ EVENT TrieRead( void )
         timeout = 3;
     }
     if( ev == EV_UNUSED ) {
-        ev = buf[0];
+        ev = (unsigned char)buf[0];
         ev_pos = 1;
     }
 
@@ -276,7 +291,7 @@ EVENT TrieRead( void )
     // in a terminfo keysequence as they are all nul-terminated.)
 
     if( cpos > ev_pos ) {
-        nextc_unget( &buf[ev_pos], cpos-ev_pos );
+        nextc_unget( &buf[ev_pos], cpos - ev_pos );
     }
     return( ev );
 }

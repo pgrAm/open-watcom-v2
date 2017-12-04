@@ -53,6 +53,7 @@
 #include <sys/console.h>
 #include <sys/dev.h>
 #include "trpimp.h"
+#include "trpcomm.h"
 #include "qnxcomm.h"
 
 
@@ -67,14 +68,14 @@ trap_retval ReqFile_get_config( void )
     ret->file.drv_separator = '\0';
     ret->file.path_separator[0] = '/';
     ret->file.path_separator[1] = '\0';
-    ret->file.newline[ 0 ] = '\n';
-    ret->file.newline[ 1 ] = '\0';
+    ret->file.line_eol[ 0 ] = '\n';
+    ret->file.line_eol[ 1 ] = '\0';
     return( sizeof( *ret ) );
 }
 
 trap_retval ReqFile_run_cmd( void )
 {
-    char         buff[256];
+    char         buff[PATH_MAX + 1];
     char         *argv[4];
     char         *shell;
     pid_t        pid;
@@ -84,7 +85,8 @@ trap_retval ReqFile_run_cmd( void )
 
 
     shell = getenv( "SHELL" );
-    if( shell == NULL ) shell = "/bin/sh";
+    if( shell == NULL )
+        shell = "/bin/sh";
     ret = GetOutPtr( 0 );
     len = GetTotalSize() - sizeof( file_run_cmd_req );
     argv[0] = shell;

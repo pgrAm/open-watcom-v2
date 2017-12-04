@@ -49,23 +49,25 @@
 #include "dbgdata.h"
 #include "dbgio.h"
 #include "dbgmem.h"
-#include "stdui.h"
+#include "uidef.h"
+#include "../qnx/h/uivirt.h"
+#include "../qnx/h/qnxuiext.h"
 #include "dbgscrn.h"
 #include "strutil.h"
+#include "gui.h"
 #include "guigmous.h"
 #include "dbgcmdln.h"
 #include "dbgprog.h"
 #include "dbginit.h"
 #include "dbglkup.h"
+#include "dbgerr.h"
 
-
-extern unsigned     UIConHandle;
 
 char                XConfig[2048];
 char                *DbgTerminal;
-unsigned            DbgConsole;
-unsigned            PrevConsole;
-unsigned            InitConsole;
+int                 DbgConsole;
+int                 PrevConsole;
+int                 InitConsole;
 int                 DbgConHandle;
 int                 DbgLines;
 int                 DbgColumns;

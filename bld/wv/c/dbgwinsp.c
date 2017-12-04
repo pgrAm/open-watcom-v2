@@ -96,7 +96,7 @@ typedef struct cue_mod {
     bool        found;
 } cue_mod;
 
-static walk_result CheckFirstFile( cue_handle *ch, void *_d )
+OVL_EXTERN walk_result CheckFirstFile( cue_handle *ch, void *_d )
 {
     cue_mod     *d = _d;
     char        *buff;
@@ -111,7 +111,7 @@ static walk_result CheckFirstFile( cue_handle *ch, void *_d )
     return( WR_STOP );
 }
 
-static walk_result CheckOneMod( mod_handle mh, void *_d )
+OVL_EXTERN walk_result CheckOneMod( mod_handle mh, void *_d )
 {
     cue_mod     *d = _d;
     d->mod = mh;
@@ -200,24 +200,24 @@ extern  void    WndGblVarInspect( mod_handle mod )
 }
 
 extern  void    WndMemInspect( address addr, char *next,
-                               unsigned len, mad_type_handle type )
+                               unsigned len, mad_type_handle mth )
 {
     a_window    *wnd;
 
-    wnd = DoWndMemOpen( addr, type );
+    wnd = DoWndMemOpen( addr, mth );
     if( next != NULL ) MemSetFollow( wnd, next );
     if( len != 0 ) MemSetLength( wnd, len );
 }
 
-extern  void    WndIOInspect( address *addr, mad_type_handle type )
+extern  void    WndIOInspect( address *addr, mad_type_handle mth )
 {
     a_window    *wnd;
 
     wnd = WndFindExisting( WND_IO );
     if( wnd == NULL ) {
-        wnd = DoWndIOOpen( addr, type );
+        wnd = DoWndIOOpen( addr, mth );
     } else {
-        IONewAddr( wnd, addr, type );
+        IONewAddr( wnd, addr, mth );
     }
 }
 

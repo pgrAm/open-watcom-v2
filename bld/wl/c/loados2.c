@@ -66,6 +66,7 @@
 #include "rcstr.h"
 #include "dosstub.h"
 #include "loados2.h"
+#include "posixfp.h"
 
 #include "clibext.h"
 
@@ -320,10 +321,10 @@ static void CopyResData( WResFileID res_fid, size_t len )
     char buff[512];
 
     for( ; len > sizeof( buff ); len -= sizeof( buff ) ) {
-        QRead( WRES_FID2PH( res_fid ), buff, sizeof( buff ), FmtData.resource );
+        QRead( FP2POSIX( res_fid ), buff, sizeof( buff ), FmtData.resource );
         WriteLoad( buff, sizeof( buff ) );
     }
-    QRead( WRES_FID2PH( res_fid ), buff, len, FmtData.resource );
+    QRead( FP2POSIX( res_fid ), buff, len, FmtData.resource );
     WriteLoad( buff, len );
 }
 
@@ -354,7 +355,7 @@ static void WriteOS2Resources( WResFileID res_fid, WResDir inRes, ResTable *outR
         addExeResRecord( outRes, exe_type, &(res->ResName),
                         lang->MemoryFlags, outRes_off,
                         (lang->Length + align - 1) >> shift_count );
-        QSeek( WRES_FID2PH( res_fid ), lang->Offset, FmtData.resource );
+        QSeek( FP2POSIX( res_fid ), lang->Offset, FmtData.resource );
         CopyResData( res_fid, lang->Length );
         NullAlign( align );
         outRes_off += (lang->Length + align - 1) >> shift_count;
@@ -751,10 +752,10 @@ static WResFileID InitNEResources( WResDir *inRes, ResTable *outRes )
     bool        error;
 
     dir = NULL;
-    res_fid = WRES_NIL_HANDLE;
+    res_fid = NULL;
     if( FmtData.resource != NULL ) {
-        res_fid = WRES_PH2FID( QOpenR( FmtData.resource ) );
-        if( res_fid != WRES_NIL_HANDLE ) {
+        res_fid = POSIX2FP( QOpenR( FmtData.resource ) );
+        if( res_fid != NULL ) {
             dir = WResInitDir();
             if( dir != NULL ) {
                 error = WResReadDir( res_fid, dir, &dup_discarded );
@@ -794,8 +795,8 @@ static void FiniNEResources( WResFileID res_fid, WResDir inRes, ResTable *outRes
         }
         WResFreeDir( inRes );
     }
-    if( res_fid != WRES_NIL_HANDLE ) {
-        QClose( WRES_FID2PH( res_fid ), FmtData.resource );
+    if( res_fid != NULL ) {
+        QClose( FP2POSIX( res_fid ), FmtData.resource );
     }
 }
 

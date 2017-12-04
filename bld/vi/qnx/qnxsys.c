@@ -39,7 +39,7 @@
 #include <sys/psinfo.h>
 #include <sys/name.h>
 #include <sys/vc.h>
-
+#include "vibios.h"
 #include "win.h"
 #include "dosx.h"
 
@@ -270,6 +270,21 @@ void MyDelay( int ms )
  */
 void SetCursorBlinkRate( int cbr )
 {
-    CursorBlinkRate = cbr;
+    EditVars.CursorBlinkRate = cbr;
 
 } /* SetCursorBlinkRate */
+
+vi_key GetKeyboard( void )
+{
+    return( GetVIKey( BIOSGetKeyboard( NULL ), 0, false ) );
+}
+
+bool KeyboardHit( void )
+{
+    return( BIOSKeyboardHit() );
+}
+
+void MyVioShowBuf( size_t offset, unsigned nchars )
+{
+    BIOSUpdateScreen( offset, nchars );
+}

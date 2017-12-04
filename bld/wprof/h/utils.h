@@ -30,10 +30,10 @@
 
 
 extern void         ReplaceExt( char * path, char * addext );
-extern char         *FindFile( char *fullname, char *name, char *path_list );
+extern char         *FindHelpFile( char *fullname, const char *help_name );
 extern void         InitPaths( void );
 extern void         Ring( void );
 #if defined( __QNX__ )
-extern ssize_t      BigRead( int fh, void *buffer, size_t size );
-extern ssize_t      BigWrite( int fh, const void *buffer, size_t size );
+extern size_t       BigRead( int fh, void *buffer, size_t size );
+extern size_t       BigWrite( int fh, const void *buffer, size_t size );
 #endif

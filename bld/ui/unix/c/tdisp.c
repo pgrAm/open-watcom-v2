@@ -2,6 +2,7 @@
 *
 *                            Open Watcom Project
 *
+* Copyright (c) 2017-2017 The Open Watcom Contributors. All Rights Reserved.
 *    Portions Copyright (c) 1983-2002 Sybase, Inc. All Rights Reserved.
 *
 *  ========================================================================
@@ -66,12 +67,12 @@
 #endif
 
 #include <curses.h>
-#include <term.h>
 #ifdef __WATCOMC__
 #include <process.h>
 #endif
 #include <sys/ioctl.h>
-
+#include "walloca.h"
+#include "wterm.h"
 #include "uidef.h"
 #include "uiattrs.h"
 #include "qdebug.h"
@@ -79,9 +80,10 @@
 #include "uivirt.h"
 #include "unxuiext.h"
 #include "ctkeyb.h"
-
 #include "tixparse.h"
-#include "walloca.h"
+#include "tixsupp.h"
+#include "doparse.h"
+#include "tdisp.h"
 
 
 #define PIXELEQUAL(p1,p2)   ((p1).ch == (p2).ch && (p1).attr == (p2).attr)
@@ -700,7 +702,7 @@ static int TI_EXEC_PROG( char *pnam )
 
     if( pnam != NULL && pnam[0] != '\0' ) {
         // get full path name of program
-        ppath = (char *)alloca( TI_PATH_LEN + strlen( pnam ) );
+        ppath = walloca( TI_PATH_LEN + strlen( pnam ) );
         if( ppath == NULL ) {
             return( false );
         }
@@ -881,7 +883,7 @@ static bool ti_initconsole( void )
 #define SA_RESTART 0
 #endif
 
-bool intern initmonitor( void )
+static bool initmonitor( void )
 /*****************************/
 {
     struct sigaction sa;
@@ -902,31 +904,7 @@ static int new_attr( int nattr, int oattr )
 {
     union {
         unsigned char   attr;
-        struct {
-#if defined( _HAS_NO_CHAR_BIT_FIELDS )
-            unsigned char   blink_back_bold_fore;
-    #define _attr_blink( a ) (((a).blink_back_bold_fore >> 7) & 1)
-    #define _attr_back( a )  (((a).blink_back_bold_fore >> 4) & 7)
-    #define _attr_bold( a )  (((a).blink_back_bold_fore >> 3) & 1)
-    #define _attr_fore( a )  ( (a).blink_back_bold_fore       & 7)
-#else
-    #if defined( __BIG_ENDIAN__ )
-            unsigned char   blink:1;
-            unsigned char   back:3;
-            unsigned char   bold:1;
-            unsigned char   fore:3;
-    #else
-            unsigned char   fore:3;
-            unsigned char   bold:1;
-            unsigned char   back:3;
-            unsigned char   blink:1;
-    #endif
-    #define _attr_blink( a ) ((a).blink)
-    #define _attr_back( a )  ((a).back)
-    #define _attr_bold( a )  ((a).bold)
-    #define _attr_fore( a )  ((a).fore)
-#endif
-        } bits;
+        attr_bits       bits;
     } nval, oval;
     nval.attr = nattr;
     oval.attr = oattr;
@@ -934,10 +912,10 @@ static int new_attr( int nattr, int oattr )
     if( oattr == -1 ) {
         oval.attr = ~nval.attr;
     }
-    if( _attr_bold( nval.bits ) != _attr_bold( oval.bits )
-      || _attr_blink( nval.bits ) != _attr_blink( oval.bits ) ) {
-        TIABold  = _attr_bold( nval.bits );
-        TIABlink = _attr_blink( nval.bits );
+    if( _attr_bold( nval ) != _attr_bold( oval )
+      || _attr_blink( nval ) != _attr_blink( oval ) ) {
+        TIABold  = _attr_bold( nval );
+        TIABlink = _attr_blink( nval );
         // Note: the TI_SETCOLOUR below has to set the attributes
         // anyways, so we've just set the flags here
     }
@@ -946,7 +924,7 @@ static int new_attr( int nattr, int oattr )
     // redo the colours. This is *necessary* for terms like VT's
     // which reset the colour when the attributes are changed
     if( nval.attr != oval.attr ) {
-        TI_SETCOLOUR( _attr_fore( nval.bits ), _attr_back( nval.bits ) );
+        TI_SETCOLOUR( _attr_fore( nval ), _attr_back( nval ) );
     }
     return( nattr );
 }
@@ -1103,8 +1081,23 @@ static int ti_hwcursor( void )
 
 // Dumps all characters we've slurped. Will use repeat_char capability if
 // there are multiple chars
-#define TI_DUMPCHARS()  {TI_REPEAT_CHAR( rchar, rcount, ralt, rcol );\
-                        rcount = 0;}
+#define TI_DUMPCHARS()  {TI_REPEAT_CHAR( rchar, rcount, ralt, rcol ); rcount = 0;}
+
+#define TI_SLURPCHAR( __ch ) \
+{ \
+    unsigned char __c = __ch; \
+    if( rcount != 0 && ( rchar != ti_char_map[__c][0] || ralt != ti_alt_map( __c ) ) ) \
+        TI_DUMPCHARS(); \
+    rcol = ( rcount == 0 ) ? j : rcol; \
+    rcount++; \
+    if( ti_char_map[__c][1] ) { \
+         /* a UTF-8 string: write it immediately, 1-byte repeats unlikely */ \
+         fputs( ti_char_map[__c], UIConFile ); \
+         rcount = 0; \
+    } \
+    rchar = ti_char_map[__c][0]; \
+    ralt = ti_alt_map( __c ); \
+}
 
 static void update_shadow( void )
 /*******************************/
@@ -1372,18 +1365,7 @@ static int ti_refresh( int must )
                                             || ( i != UIData->height - 1 ) ) {
                     // Slurp up the char to be output. Will dump existing
                     // chars if new char is different.
-                    unsigned c = bufp[j].ch;
-                    if( rcount != 0 && ( rchar != ti_char_map[c][0] || ralt != ti_alt_map( c ) ) )
-                         TI_DUMPCHARS();
-                    rcol = ( rcount == 0 ) ? j : rcol;
-                    rcount++;
-                    if( ti_char_map[c][1] ) {
-                         /* a UTF-8 string: write it immediately, 1-byte repeats unlikely */
-                         fputs( ti_char_map[c], UIConFile );
-                         rcount = 0;
-                    }
-                    rchar = ti_char_map[c][0];
-                    ralt = ti_alt_map( c );
+                    TI_SLURPCHAR( bufp[j].ch );
                     OldCol++;
 
                     // if we walk off the edge our position is undefined
@@ -1433,7 +1415,7 @@ static int td_setcur( ORD row, ORD col, CURSOR_TYPE typ, int attr )
 }
 
 
-EVENT td_event( void )
+static EVENT td_event( void )
 {
     EVENT       ev;
 

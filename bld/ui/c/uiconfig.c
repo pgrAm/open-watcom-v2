@@ -50,7 +50,9 @@ bool uiconfig( char *fn, char **envvars )
     char        *s;
     ATTR        attr;
 
-    _unused( envvars );
+#if defined( __NETWARE__ )
+    /* unused parameters */ (void)envvars;
+#endif
 
     UIData->no_snow = true;
     uiattrs();
@@ -64,15 +66,15 @@ bool uiconfig( char *fn, char **envvars )
         colour = "ATTR_COL";
         slen = 8;
     }
-    #if !defined( __NETWARE__ )
-        for( ; envvars != NULL  &&  *envvars != NULL; ++envvars ) {
-            _searchenv( fn, *envvars, buffer );
-            if( buffer[0] != '\0' ) {
-                break;
-            }
+#if !defined( __NETWARE__ )
+    for( ; envvars != NULL  &&  *envvars != NULL; ++envvars ) {
+        _searchenv( fn, *envvars, buffer );
+        if( buffer[0] != '\0' ) {
+            break;
         }
-        fn = buffer;
-    #endif
+    }
+    fn = buffer;
+#endif
     if( fn != NULL && fn[0] != '\0' ) {
         config = fopen( fn, "r" );
         if( config != NULL ) {
@@ -94,7 +96,8 @@ bool uiconfig( char *fn, char **envvars )
                 } else if( blen > 9 && memicmp( "SNOWCHECK", buffer, 9 ) == 0 ) {
                     UIData->no_snow = ( buffer[ 10 ] == '0' );
                 } else if( blen > 11 && memicmp( "MOUSE_SPEED", buffer, 11 ) == 0 ) {
-                    uimousespeed( strtol( &buffer[ 12 ], NULL, 10 ) );
+                    long speed = strtol( &buffer[ 12 ], NULL, 10 );
+                    uimousespeed( ( speed < 0 ) ? 0 : (unsigned)speed );
                 } else if( blen > 8 && memicmp( "GRAPHICS", buffer, 8 ) == 0 ) {
                     UIData->no_graphics = ( buffer[ 9 ] == '0' );
                 }

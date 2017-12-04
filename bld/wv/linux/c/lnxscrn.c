@@ -45,15 +45,15 @@
 #include <signal.h>
 #include <ctype.h>
 #include <errno.h>
-#include "curses.h"
-#define BOOL_DEFINED    // curses.h typedefs 'bool'
+#include <term.h>
+#include <curses.h>
 #include "dbgdefn.h"
 #include "dbgdata.h"
 #include "dbgio.h"
 #include "dbgmem.h"
-#include "term.h"
-#include "stdui.h"
-#include "../unix/h/ctkeyb.h"
+#include "uidef.h"
+#include "../unix/h/uivirt.h"
+#include "../unix/h/unxuiext.h"
 #include "dbgscrn.h"
 #include "strutil.h"
 #include "gui.h"

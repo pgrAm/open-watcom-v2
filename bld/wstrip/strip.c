@@ -44,7 +44,7 @@
 #include "wio.h"
 #include "sopen.h"
 #include "machtype.h"
-#include "dbginfo.h"
+#include "wdbginfo.h"
 #include "cv4.h"
 #include "tistrail.h"
 #include "wstrip.h"
@@ -62,6 +62,8 @@
 #define WRESMAGIC1      0xC3D2CDCF
 
 #define SEEK_POSBACK(p) (-(long)(p))
+
+#define CopyData(i,o)   CopyDataLen( i, o, ~0UL )
 
 #include "pushpck1.h"
 typedef struct WResHeader {
@@ -123,14 +125,14 @@ static void FatalDelTmp( int reason, const char *insert )
     Fatal( reason, insert );
 }
 
-static void CopyData( fdata *in, fdata *out, unsigned long max )
+static void CopyDataLen( fdata *in, fdata *out, unsigned long max )
 {
     size_t              size;
 
-    for( ;; ) {
-        if( max == 0 )
-            break;
-        size = ( max > (unsigned long)bufsize ) ? bufsize : max;
+    size = bufsize;
+    for( ; max != 0; max -= (unsigned long)size ) {
+        if( size > max )
+            size = (size_t)max;
         size = posix_read( in->h, Buffer, size );
         if( size == 0 )
             break;
@@ -140,7 +142,6 @@ static void CopyData( fdata *in, fdata *out, unsigned long max )
         if( size != (size_t)posix_write( out->h, Buffer, size ) ) {
             FatalDelTmp( MSG_WRITE_ERROR, out->name );
         }
-        max -= (unsigned long)size;
     }
 }
 
@@ -155,13 +156,14 @@ static bool TryWATCOM( int h, info_info *info, bool resfile )
             return( false );
         if( header.signature != FOX_SIGNATURE1
           && header.signature != FOX_SIGNATURE2
-          && header.signature != (resfile ? VALID_SIGNATURE : WAT_RES_SIG) )
+          && header.signature != (resfile ? WAT_DBG_SIGNATURE : WAT_RES_SIG) )
             break;
         if( header.debug_size > end )
             return( false );
-        end = lseek( h, end - header.debug_size, SEEK_SET );
+        end -= header.debug_size;
+        lseek( h, end, SEEK_SET );
     }
-    if( header.signature != (resfile ? WAT_RES_SIG : VALID_SIGNATURE) )
+    if( header.signature != (resfile ? WAT_RES_SIG : WAT_DBG_SIGNATURE) )
         return( false );
     end += sizeof( header );
     if( end <= header.debug_size )
@@ -237,11 +239,12 @@ static bool IsSymResFile( int handle, bool resfile )
 {
     master_dbg_header   header;
     info_info           info;
+    unsigned long       pos;
 
-    lseek( handle, SEEK_POSBACK( sizeof( header ) ), SEEK_END );
+    pos = lseek( handle, SEEK_POSBACK( sizeof( header ) ), SEEK_END );
     if( posix_read( handle, (void *)&header, sizeof( header ) ) != sizeof( header ) )
         return( false );
-    if( header.signature == (resfile ? WAT_RES_SIG : VALID_SIGNATURE) && lseek( handle, 0L, SEEK_END ) == (long)header.debug_size )
+    if( header.signature == (resfile ? WAT_RES_SIG : WAT_DBG_SIGNATURE) && ( pos + sizeof( header ) ) == header.debug_size )
         return( true );
     if( resfile )
         return( false );
@@ -271,21 +274,14 @@ static void AddInfo( void )
 {
     info_info           info;
     master_dbg_header   header;
-    int                 msgid;
 
     if( finfo.name[0] == '\0' ) {
-        msgid = MSG_NO_SPECIFIED_0;
-        if( res )
-            msgid = MSG_NO_SPECIFIED_1;
-        Fatal( msgid, NULL );
+        Fatal( ( res ) ? MSG_NO_SPECIFIED_1 : MSG_NO_SPECIFIED_0, NULL );
     }
 
     FindInfoInfo( fin.h, &info, res );
     if( info.type != WRAP_NONE ) {
-        msgid = MSG_HAS_INFO_0;
-        if( res )
-            msgid = MSG_HAS_INFO_1;
-        Fatal( msgid, fin.name );
+        Fatal( ( res ) ? MSG_HAS_INFO_1 : MSG_HAS_INFO_0, fin.name );
     }
 
     /* initialize symbol or resource file */
@@ -294,22 +290,19 @@ static void AddInfo( void )
         FatalDelTmp( MSG_CANT_OPEN, finfo.name );
     }
     if( !IsResMagic( finfo.h, res ) && !IsSymResFile( finfo.h, res ) ) {
-        msgid = MSG_INV_FILE_0;
-        if( res )
-            msgid = MSG_INV_FILE_1;
-        FatalDelTmp( msgid, finfo.name );
+        FatalDelTmp( ( res ) ? MSG_INV_FILE_1 : MSG_INV_FILE_0, finfo.name );
     }
     if( strcmp( fin.name, fout.name ) != 0 ) {
         if( lseek( fin.h, 0L, SEEK_SET ) == -1L ) {
             Fatal( MSG_SEEK_ERROR, fin.name );
         }
-        CopyData( &fin, &fout, ~0UL );
+        CopyData( &fin, &fout );
     }
 
     /* transfer info file to output file */
     lseek( finfo.h, 0L, SEEK_SET );
     lseek( fout.h, 0L, SEEK_END );
-    CopyData( &finfo, &fout, ~0UL );
+    CopyData( &finfo, &fout );
 
     /* add header (trailer), if required */
     if( res ) {
@@ -328,15 +321,11 @@ static void AddInfo( void )
 static void StripInfo( void )
 {
     info_info           info;
-    int                 msgid;
 
     FindInfoInfo( fin.h, &info, res );
     if( info.type == WRAP_NONE ) {
         if( !nodebug_ok ) {
-            msgid = MSG_NO_INFO_0;
-            if( res )
-                msgid = MSG_NO_INFO_1;
-            Fatal( msgid, fin.name );
+            Fatal( ( res ) ? MSG_NO_INFO_1 : MSG_NO_INFO_0, fin.name );
         }
     }
 
@@ -348,10 +337,7 @@ static void StripInfo( void )
 #endif
         finfo.h = sopen4( finfo.name, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, SH_DENYRW, PMODE_RW );
         if( finfo.h == -1 ) {
-            msgid = MSG_CANT_CREATE_0;
-            if( res )
-                msgid = MSG_CANT_CREATE_1;
-            FatalDelTmp( msgid, finfo.name );
+            FatalDelTmp( ( res ) ? MSG_CANT_CREATE_1 : MSG_CANT_CREATE_0, finfo.name );
         }
     }
 
@@ -360,7 +346,7 @@ static void StripInfo( void )
         if( lseek( fin.h, 0L, SEEK_SET ) == -1L ) {
             Fatal( MSG_SEEK_ERROR, fin.name );
         }
-        CopyData( &fin, &fout, info.start );
+        CopyDataLen( &fin, &fout, info.start );
     } else {
         lseek( fin.h, info.start, SEEK_SET );
         lseek( fout.h, info.start, SEEK_SET );
@@ -368,14 +354,14 @@ static void StripInfo( void )
 
     if( finfo.h != -1 ) {
         /* transfer data to info file */
-        CopyData( &fin, &finfo, info.len );
+        CopyDataLen( &fin, &finfo, info.len );
     } else {
         /* else skip it */
         lseek( fin.h, info.len, SEEK_CUR );
     }
 
     /* transfer remaining data */
-    CopyData( &fin, &fout, ~0UL );
+    CopyData( &fin, &fout );
 }
 
 static bool Suffix( char *fname, const char *suff )
