@@ -930,13 +930,13 @@ static void TermDIP( void )
 static int DumpFile( const char *file, char **dips )
 {
     int             rc = 1;
-    dig_fhandle     fid;
+    FILE            *fp;
 
     /*
      * Open the file
      */
-    fid = DIGCli( Open )( file, DIG_READ );
-    if( fid == DIG_NIL_HANDLE ) {
+    fp = DIGCli( Open )( file, DIG_READ );
+    if( fp == NULL ) {
         return( ErrorMsg( "Failed to open '%s'\n", file ) );
     }
 
@@ -947,19 +947,19 @@ static int DumpFile( const char *file, char **dips )
         process_info    *proc = DIPCreateProcess();
 
         if( proc != NULL ) {
-            int         prty;
-            mod_handle  mh = 0;
+            dip_priority    priority;
+            mod_handle      mh = 0;
 
-            for( prty = DIPPriority( 0 ); prty != 0; prty = DIPPriority( prty ) ) {
-                DIGCli( Seek )( fid, 0, DIG_ORG );
-                mh = DIPLoadInfo( fid, 0, prty );
+            for( priority = 0; (priority = DIPPriority( priority )) != 0;  ) {
+                DIGCli( Seek )( fp, 0, DIG_ORG );
+                mh = DIPLoadInfo( fp, 0, priority );
                 if( mh != NO_MOD ) {
                     break;
                 }
             }
             if( mh != NO_MOD ) {
                 DIPMapInfo( mh, NULL );
-                InfoMsg( "DIP opened '%s' at prty=%d, mh=%lx\n", file, prty, (long)mh );
+                InfoMsg( "DIP opened '%s' at prty=%d, mh=%lx\n", file, priority, (long)mh );
 
                 /*
                  * Enumerate the debug info.
@@ -977,7 +977,7 @@ static int DumpFile( const char *file, char **dips )
         }
         TermDIP();
     }
-    DIGCli( Close )( fid );
+    DIGCli( Close )( fp );
     return( rc );
 }
 

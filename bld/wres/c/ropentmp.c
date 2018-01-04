@@ -2,7 +2,7 @@
 *
 *                            Open Watcom Project
 *
-*    Portions Copyright (c) 1983-2002 Sybase, Inc. All Rights Reserved.
+* Copyright (c) 2017-2017 The Open Watcom Contributors. All Rights Reserved.
 *
 *  ========================================================================
 *
@@ -24,12 +24,25 @@
 *
 *  ========================================================================
 *
-* Description:  Banner configuration.
+* Description:  WHEN YOU FIGURE OUT WHAT THIS FILE DOES, PLEASE
+*               DESCRIBE IT HERE!
 *
 ****************************************************************************/
 
 
-#define _BANVER     1300
-#define _BETAVER    1
+#include "layer0.h"
+#include "opcl.h"
+#include "reserr.h"
+#include "wresrtns.h"
 
-#define CURR_YEAR   "2017"
+
+FILE *ResOpenFileTmp( const char *filename )
+/******************************************/
+{
+    FILE    *fp;
+
+    fp = WRESOPEN( filename, WRES_OPEN_TMP );
+    if( fp == NULL )
+        WRES_ERROR( WRS_OPEN_FAILED );
+    return( fp );
+}

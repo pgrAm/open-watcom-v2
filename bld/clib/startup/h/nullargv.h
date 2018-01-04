@@ -2,6 +2,7 @@
 *
 *                            Open Watcom Project
 *
+* Copyright (c) 2002-2017 The Open Watcom Contributors. All Rights Reserved.
 *    Portions Copyright (c) 1983-2002 Sybase, Inc. All Rights Reserved.
 *
 *  ========================================================================
@@ -24,16 +25,10 @@
 *
 *  ========================================================================
 *
-* Description:  Out of memory fatal error routine.
+* Description:  Special argv-less invocation of main().
 *
 ****************************************************************************/
 
 
-#include "variety.h"
-#include "exitwmsg.h"
-
-_WCRTLINK _WCNORETURN void _Not_Enough_Memory( void )
-{
-    __fatal_runtime_error( "Not enough memory", 1 );
-    // never return
-}
+extern int  main( void );
+extern void __Null_Argv( void );

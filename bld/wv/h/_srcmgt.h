@@ -49,7 +49,10 @@
 
 #define SMSeekStart( fp )               SeekStream( fp, 0L, DIO_SEEK_CUR )
 #define SMSeekOrg( fp, offset )         SeekStream( fp, offset, DIO_SEEK_ORG )
-#define SMSeekEnd( fp )                 SeekStream( fp, 0L, DIO_SEEK_END );
+#define SMSeekEnd( fp )                 SeekStream( fp, 0L, DIO_SEEK_END )
+#define SMSeekFail(x)                   ((x) == ERR_SEEK)
+
+#define SMTell( fp )                    SeekStream( fp, 0L, DIO_SEEK_CUR )
 
 #define SMOpenRead( name )              FileOpen( name, OP_READ )
 #define SMNilHandle( fp)                ( fp == NIL_HANDLE )

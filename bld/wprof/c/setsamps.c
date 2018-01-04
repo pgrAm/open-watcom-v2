@@ -577,19 +577,20 @@ STATIC void loadImageInfo( image_info * curr_image )
 /**************************************************/
 {
     size_t          name_len;
-    dig_fhandle     obj_fp;
-    dig_fhandle     sym_fp;
+    FILE            *obj_fp;
+    FILE            *sym_fp;
     struct stat     file_status;
 
-    sym_fp = DIG_NIL_HANDLE;
-    obj_fp = DIG_NIL_HANDLE;
+    sym_fp = NULL;
+    obj_fp = NULL;
     curr_image->dip_handle = NO_MOD;
     if( curr_image->sym_deleted ) {
     } else if( curr_image->sym_name != NULL ) {
         sym_fp = DIGCli( Open )( curr_image->sym_name, DIG_READ );
-        if( sym_fp != DIG_NIL_HANDLE ) {
+        if( sym_fp != NULL ) {
             curr_image->dip_handle = WPDipLoadInfo( sym_fp, curr_image->sym_name, curr_image,
                                        sizeof( image_info ), DIP_PRIOR_MIN, DIP_PRIOR_MAX );
+            DIGCli( Close )( sym_fp );
         }
     } else {
         name_len = strlen( curr_image->name ) + 1;
@@ -599,9 +600,10 @@ STATIC void loadImageInfo( image_info * curr_image )
         curr_image->sym_name = ProfAlloc( name_len );
         memcpy( curr_image->sym_name, FNameBuff, name_len );
         sym_fp = DIGCli( Open )( curr_image->sym_name, DIG_READ );
-        if( sym_fp != DIG_NIL_HANDLE ) {
+        if( sym_fp != NULL ) {
             curr_image->dip_handle = WPDipLoadInfo( sym_fp, curr_image->sym_name, curr_image,
                                       sizeof( image_info ), DIP_PRIOR_MIN, DIP_PRIOR_MAX );
+            DIGCli( Close )( sym_fp );
         }
         if( curr_image->dip_handle == NO_MOD ) {
             ProfFree( curr_image->sym_name );
@@ -626,23 +628,21 @@ STATIC void loadImageInfo( image_info * curr_image )
         }
     }
     obj_fp = DIGCli( Open )( curr_image->name, DIG_READ );
-    if( obj_fp == DIG_NIL_HANDLE ) {
+    if( obj_fp != NULL ) {
+        if( !curr_image->sym_deleted ) {
+        } else if( curr_image->dip_handle == NO_MOD ) {
+            curr_image->dip_handle = WPDipLoadInfo( obj_fp, curr_image->name, curr_image,
+                                           sizeof( image_info ), DIP_PRIOR_MIN, DIP_PRIOR_MAX );
+        }
+        DIGCli( Close )( obj_fp );
+    } else {
         curr_image->exe_not_found = true;
         if( curr_image->main_load ) {
             ErrorMsg( LIT( Exe_Not_Found ), curr_image->name );
         }
     }
-    if( curr_image->dip_handle == NO_MOD && !curr_image->sym_deleted && obj_fp != DIG_NIL_HANDLE ) {
-        curr_image->dip_handle = WPDipLoadInfo( obj_fp, curr_image->name, curr_image,
-                                   sizeof( image_info ), DIP_PRIOR_MIN, DIP_PRIOR_MAX );
-    }
-    if( curr_image->dip_handle == NO_MOD ) {
-        if( sym_fp != DIG_NIL_HANDLE ) {
-            DIGCli( Close )( sym_fp );
-        }
-        if( obj_fp != DIG_NIL_HANDLE ) {
-            DIGCli( Close )( obj_fp );
-        }
+    if( curr_image->dip_handle != NO_MOD ) {
+        DIPMapInfo( curr_image->dip_handle, curr_image );
     }
     initModuleInfo( curr_image );
     if( curr_image->dip_handle != NO_MOD ) {

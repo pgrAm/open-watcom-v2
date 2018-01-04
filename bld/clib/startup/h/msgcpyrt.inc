@@ -2,6 +2,7 @@
 ;*
 ;*                            Open Watcom Project
 ;*
+;* Copyright (c) 2002-2017 The Open Watcom Contributors. All Rights Reserved.
 ;*    Portions Copyright (c) 1983-2002 Sybase, Inc. All Rights Reserved.
 ;*
 ;*  ========================================================================
@@ -28,5 +29,16 @@
 ;*
 ;*****************************************************************************
 
+_STRING macro p1
+        db "&p1"
+        endm
 
-        db      "Portions Copyright (C) Sybase, Inc. 1988-2002."
+ifdef __386__
+        db "Open Watcom C/C++32 Run-Time system. "
+else
+        db "Open Watcom C/C++16 Run-Time system. "
+endif
+        db "Copyright (c) Open Watcom Contributors 2002-"
+        _STRING %_CYEAR
+        db ". "
+        db "Portions Copyright (C) Sybase, Inc. 1988-2002.", 0

@@ -102,24 +102,19 @@ bool GetSymbolName( address *addr, char *name, DWORD *symoff )
  */
 bool LoadDbgInfo( ModuleNode *mod )
 {
-    unsigned            priority;
+    dip_priority    priority;
 
     if( !GetSegmentList( mod ) )
         return( false );
     mod->syminfo->procinfo = DIPCreateProcess();
-    priority = 0;
-    for( ;; ) {
-        priority = DIPPriority( priority );
-        if( priority == 0 )
-            break;
-        mod->syminfo->hdl = DIPLoadInfo( mod->fid, 0, priority );
+    for( priority = 0; (priority = DIPPriority( priority )) != 0; ) {
+        mod->syminfo->hdl = DIPLoadInfo( mod->fp, 0, priority );
         if( mod->syminfo->hdl != NO_MOD ) {
             break;
         }
     }
     if( mod->syminfo->hdl == NO_MOD )
         return( false );
-    DIPMapInfo( mod->syminfo->hdl, mod );
     return( true );
 }
 

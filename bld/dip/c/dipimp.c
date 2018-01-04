@@ -29,6 +29,7 @@
 ****************************************************************************/
 
 
+#include <stdio.h>
 #include <string.h>
 #if defined( __WINDOWS__ )
 #include <stdlib.h>
@@ -199,40 +200,45 @@ void DCAddrSection( address *a )
     DIPClient->AddrSection( a );
 }
 
-dig_fhandle DCOpen( const char *path, dig_open flags )
+FILE *DCOpen( const char *path, dig_open flags )
 {
     return( DIPClient->Open( path, flags ) );
 }
 
-unsigned long DCSeek( dig_fhandle fid, unsigned long p, dig_seek w )
+int DCSeek( FILE *fp, unsigned long p, dig_seek w )
 {
-    return( DIPClient->Seek( fid, p, w ) );
+    return( DIPClient->Seek( fp, p, w ) );
 }
 
-size_t DCRead( dig_fhandle fid, void *b, size_t s )
+unsigned long DCTell( FILE *fp )
 {
-    return( DIPClient->Read( fid, b, s ) );
+    return( DIPClient->Tell( fp ) );
 }
 
-dip_status DCReadAt( dig_fhandle fid, void *b, size_t s, unsigned long p )
+size_t DCRead( FILE *fp, void *b, size_t s )
 {
-    if( DIPClient->Seek( fid, p, DIG_ORG ) != p ) {
+    return( DIPClient->Read( fp, b, s ) );
+}
+
+dip_status DCReadAt( FILE *fp, void *b, size_t s, unsigned long p )
+{
+    if( DIPClient->Seek( fp, p, DIG_ORG ) ) {
         return( DS_ERR | DS_FSEEK_FAILED );
     }
-    if( DIPClient->Read( fid, b, s ) != s ) {
+    if( DIPClient->Read( fp, b, s ) != s ) {
         return( DS_ERR | DS_FREAD_FAILED );
     }
     return( DS_OK );
 }
 
-size_t DCWrite( dig_fhandle fid, const void *b, size_t s )
+size_t DCWrite( FILE *fp, const void *b, size_t s )
 {
-    return( DIPClient->Write( fid, b, s ) );
+    return( DIPClient->Write( fp, b, s ) );
 }
 
-void DCClose( dig_fhandle fid )
+void DCClose( FILE *fp )
 {
-    DIPClient->Close( fid );
+    DIPClient->Close( fp );
 }
 
 void DCRemove( const char *path, dig_open flags )

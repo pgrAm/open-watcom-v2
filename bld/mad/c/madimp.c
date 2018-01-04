@@ -164,24 +164,19 @@ void    MCFree( void *p )
     MADClient->Free( p );
 }
 
-dig_fhandle MCOpen( const char *name, dig_open mode )
+FILE *MCOpen( const char *name, dig_open mode )
 {
     return( MADClient->Open( name, mode ) );
 }
 
-unsigned long   MCSeek( dig_fhandle fid, unsigned long p, dig_seek m )
+size_t  MCRead( FILE *fp, void *d, size_t l )
 {
-    return( MADClient->Seek( fid, p, m ) );
+    return( MADClient->Read( fp, d, l ) );
 }
 
-size_t  MCRead( dig_fhandle fid, void *d, size_t l )
+void    MCClose( FILE *fp )
 {
-    return( MADClient->Read( fid, d, l ) );
-}
-
-void    MCClose( dig_fhandle fid )
-{
-    MADClient->Close( fid );
+    MADClient->Close( fp );
 }
 
 size_t  MCReadMem( address a, size_t size, void *buff )

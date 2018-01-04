@@ -48,12 +48,11 @@
 #define DEBUGOUT( x )
 static process_info     *curProcess;
 static mod_handle       curModHdl;
-static dig_fhandle      cur_fid;
 static BOOL             dipIsLoaded;
 
 
 #if 0
-dig_fhandle PathOpen( char *name, unsigned len, char *ext )
+FILE *PathOpen( char *name, unsigned len, char *ext )
 {
     char        path[ _MAX_PATH ];
     char        *realname;
@@ -72,7 +71,7 @@ dig_fhandle PathOpen( char *name, unsigned len, char *ext )
     }
     _searchenv( realname, "PATH", path );
     if( *path == '\0' ) {
-        return( DIG_NIL_HANDLE );
+        return( NULL );
     } else {
         return( DIGCli( Open )( path, DIG_READ ) );
     }
@@ -118,45 +117,33 @@ void FiniSymbols( void )
  */
 bool LoadDbgInfo( void )
 {
-    bool                err;
-    unsigned            priority;
+    dip_priority    priority;
+    FILE            *fp;
 
     DEBUGOUT( "Enter LoadDbgInfo" );
-    err = true;
+    curModHdl = NO_MOD;
     curProcess = DIPCreateProcess();
-    cur_fid = DIGCli( Open )( DTModuleEntry.szExePath , DIG_READ );
-    if( cur_fid != DIG_NIL_HANDLE ) {
+    fp = DIGCli( Open )( DTModuleEntry.szExePath , DIG_READ );
+    if( fp != NULL ) {
         DEBUGOUT( "File open OK" );
-        priority = 0;
-        for( ;; ) {
-            priority = DIPPriority( priority );
-            if( priority == 0 )
-                break;
-            curModHdl = DIPLoadInfo( cur_fid, 0, priority );
+        for( priority = 0; (priority = DIPPriority( priority )) != 0; ) {
+            curModHdl = DIPLoadInfo( fp, 0, priority );
             if( curModHdl != NO_MOD ) {
                 break;
             }
         }
+        DIGCli( Close )( fp );
         if( curModHdl != NO_MOD ) {
             DEBUGOUT( "debug info load OK" );
             DIPMapInfo( curModHdl, NULL );
-            err = false;
-        } else {
-            DEBUGOUT( "curModHdl == NO_MOD" );
+            return( true );
         }
+        DEBUGOUT( "curModHdl == NO_MOD" );
     }
-    if( err ) {
-        DEBUGOUT( "LoadDbgInfo Failed" );
-        if( cur_fid != DIG_NIL_HANDLE ) {
-            DIGCli( Close )( cur_fid );
-            cur_fid = DIG_NIL_HANDLE;
-        }
-        DIPDestroyProcess( curProcess );
-        curProcess = NULL;
-        curModHdl = NO_MOD;
-        return( false );
-    }
-    return( true );
+    DEBUGOUT( "LoadDbgInfo Failed" );
+    DIPDestroyProcess( curProcess );
+    curProcess = NULL;
+    return( false );
 }
 
 /*
@@ -235,20 +222,16 @@ BOOL FindSymbol( ADDRESS *addr, syminfo *si )
 }
 
 /*
- * SymFileClose - close the current symfile
+ * UnloadDbgInfo - cleanup DIP
  */
-void SymFileClose( void )
+void UnloadDbgInfo( void )
 {
     if( curModHdl != NO_MOD ) {
         DIPUnloadInfo( curModHdl );
+        curModHdl = NO_MOD;
     }
     if( curProcess != NULL ) {
         DIPDestroyProcess( curProcess );
+        curProcess = NULL;
     }
-    if( cur_fid != DIG_NIL_HANDLE ) {
-        DIGCli( Close )( cur_fid );
-        cur_fid = DIG_NIL_HANDLE;
-    }
-    curProcess = NULL;
-    curModHdl = NO_MOD;
 }

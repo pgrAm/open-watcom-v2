@@ -2,6 +2,7 @@
 ;*
 ;*                            Open Watcom Project
 ;*
+;* Copyright (c) 2002-2017 The Open Watcom Contributors. All Rights Reserved.
 ;*    Portions Copyright (c) 1983-2002 Sybase, Inc. All Rights Reserved.
 ;*
 ;*  ========================================================================
@@ -58,6 +59,7 @@ comment&
 
 .386p
 
+include langenv.inc
 include xinit.inc
 include extender.inc
 
@@ -92,10 +94,13 @@ __X386_STACK            ends
 __X386_GROUP_16         group   __X386_DATASEG_16,__X386_STACK
 
 __X386_CODESEG_16       segment para use16 public 'CODE'
-assume cs:__X386_CODESEG_16,ds:nothing,es:nothing,fs:nothing,gs:nothing,ss:nothing
-extrn __x386_start:near
-_cstart_:
+        assume cs:__X386_CODESEG_16,ds:nothing,es:nothing,fs:nothing,gs:nothing,ss:nothing
+        extrn __x386_start:near
+
+_cstart_ proc near
         jmp     __x386_start    ;jump to 16 bit initialization
+_cstart_ endp
+
 __X386_CODESEG_16       ends
 
 
@@ -117,8 +122,10 @@ DGROUP group BEGTEXT,_TEXT,CODE32,_NULL,_AFTERNULL,CONST,_DATA,DATA,XIB,XI,XIE,Y
 
 BEGTEXT  segment use32 para public 'CODE'
         assume  cs:_TEXT
-        jmp     null_error
+        jmp short null_error
         nop     ;2
+        public ___begtext
+___begtext label byte
         nop     ;3
         nop     ;4
         nop     ;5
@@ -154,21 +161,6 @@ _AFTERNULL ends
 
 CONST   segment word public 'DATA'
 CONST   ends
-
-XIB     segment word public 'DATA'
-XIB     ends
-XI      segment word public 'DATA'
-XI      ends
-XIE     segment word public 'DATA'
-XIE     ends
-
-YIB     segment word public 'DATA'
-YIB     ends
-YI      segment word public 'DATA'
-YI      ends
-YIE     segment word public 'DATA'
-YIE     ends
-
 
 _DATA    segment dword public 'DATA'
 extrn __x32_stack_size:dword
@@ -221,12 +213,6 @@ STACK   ends
 
         assume  cs:_TEXT
         assume  ds:DGROUP
-
-;
-; copyright message
-;
-include msgrt32.inc
-include msgcpyrt.inc
 
 ;
 ; miscellaneous code-segment messages
@@ -422,6 +408,11 @@ L5:
         mov     ah,4cH                  ; DOS call to exit with return code
         int     021h                    ; back to DOS
 __exit   endp
+
+;
+; copyright message
+;
+include msgcpyrt.inc
 
         public  __GETDS
 __GETDS proc    near

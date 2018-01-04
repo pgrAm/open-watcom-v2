@@ -34,7 +34,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "wio.h"
 #include "wrglbl.h"
 #include "wrmemi.h"
 #include "wrimg.h"
@@ -57,8 +56,6 @@
 #include "dllmain.h"
 #include "wresdefn.h"
 #include "reserr.h"
-
-#include "clibext.h"
 
 
 /****************************************************************************/
@@ -91,7 +88,7 @@ static HINSTANCE        WRInstance = NULL;
 static int              ref_count = 0;
 
 
-WResFileID res_open( const char *file_name, wres_open_mode omode )
+FILE *res_open( const char *file_name, wres_open_mode omode )
 {
     FILE    *fp;
 
@@ -104,47 +101,50 @@ WResFileID res_open( const char *file_name, wres_open_mode omode )
     case WRES_OPEN_NEW:
         fp = fopen( file_name, "wb" );
         break;
+    case WRES_OPEN_TMP:
+        fp = tmpfile();
+        break;
     }
     if( fp == NULL )
         WRES_ERROR( WRS_OPEN_FAILED );
     return( fp );
 }
 
-bool res_close( WResFileID fid )
+bool res_close( FILE *fp )
 {
-    return( fclose( fid ) != 0 );
+    return( fclose( fp ) != 0 );
 }
 
-size_t res_read( WResFileID fid, void *buf, size_t size )
+size_t res_read( FILE *fp, void *buf, size_t size )
 {
-    return( fread( buf, 1, size, fid ) );
+    return( fread( buf, 1, size, fp ) );
 }
 
-size_t res_write( WResFileID fid, const void *buf, size_t size )
+size_t res_write( FILE *fp, const void *buf, size_t size )
 {
-    return( fwrite( buf, 1, size, fid ) );
+    return( fwrite( buf, 1, size, fp ) );
 }
 
-bool res_seek( WResFileID fid, WResFileOffset pos, int where )
+bool res_seek( FILE *fp, long pos, int where )
 {
     if( where == SEEK_SET ) {
         /* fool the wres library into thinking that the resource information starts at offset 0 */
-        return( fseek( fid, pos + WResFileShift, where ) != 0 );
+        return( fseek( fp, pos + WResFileShift, where ) != 0 );
     }
-    return( fseek( fid, pos, where ) != 0 );
+    return( fseek( fp, pos, where ) != 0 );
 }
 
-WResFileOffset res_tell( WResFileID fid )
+long res_tell( FILE *fp )
 {
-    return( ftell( fid ) );
+    return( ftell( fp ) );
 }
 
-bool res_ioerr( WResFileID fid, size_t rc )
+bool res_ioerr( FILE *fp, size_t rc )
 /*****************************************/
 {
     /* unused parameters */ (void)rc;
 
-    return( ferror( fid ) != 0 );
+    return( ferror( fp ) != 0 );
 }
 
 /* set the WRES library to use compatible functions */

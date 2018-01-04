@@ -89,7 +89,7 @@ extern const char   DIPImp( Name )[];
 struct dip_imp_routines {
     unsigned_8          major;
     unsigned_8          minor;
-    unsigned_16         dip_priority;
+    dip_priority        priority;
     const char          *dip_name;
 
     _DIPImp( HandleSize );
@@ -171,6 +171,7 @@ typedef struct dip_client_routines {
 
     _DIGCli( Open );
     _DIGCli( Seek );
+    _DIGCli( Tell );
     _DIGCli( Read );
     _DIGCli( Write );
     _DIGCli( Close );
@@ -208,6 +209,6 @@ extern dip_fini_func DIPUNLOAD;
 #undef pick
 
 extern void         *DC( AllocZ )( size_t amount );
-extern dip_status   DC( ReadAt )( dig_fhandle fid, void *b, size_t s, unsigned long p );
+extern dip_status   DC( ReadAt )( FILE *fp, void *b, size_t s, unsigned long p );
 
 #endif
