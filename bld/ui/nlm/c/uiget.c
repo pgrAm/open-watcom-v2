@@ -34,23 +34,36 @@
 #include <process.h>
 #include "uidef.h"
 #include "uiforce.h"
-#include "nw_clib.h"
+#include "nw_lib.h"
 
 
 // be very careful about setting this true
 static bool EnterForever = false;
+
+MOUSETIME UIAPI uiclock( void )
+/*****************************
+ * this routine get time in platform dependant units, 
+ * used for mouse & timer delays 
+ */
+{
+    return( clock() );
+}
+
+unsigned UIAPI uiclockdelay( unsigned milli )
+/*******************************************
+ * this routine converts milli-seconds into platform
+ * dependant units - used to set mouse & timer delays
+ */
+{
+    /* NetWare uses a clock tick of .01 seconds. */
+    return( milli / 10 );
+}
 
 void UIAPI uiflush( void )
 /************************/
 {
     uiflushevent();
     flushkey();
-}
-
-unsigned long UIAPI uiclock( void )
-/**********************************/
-{
-    return( clock() );
 }
 
 void UIAPI uiforceinfloop( void )
@@ -78,9 +91,9 @@ static void foreverloop( void )
 ui_event UIAPI uieventsource( bool update )
 /*****************************************/
 {
-    register ui_event       ui_ev;
-    static   int            ReturnIdle = 1;
-    unsigned long           start;
+    static int      ReturnIdle = 1;
+    ui_event        ui_ev;
+    MOUSETIME       start;
 
     start = uiclock();
     for( ; ; ) {

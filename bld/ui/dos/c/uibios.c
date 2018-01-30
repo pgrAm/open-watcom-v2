@@ -2,6 +2,7 @@
 *
 *                            Open Watcom Project
 *
+* Copyright (c) 2002-2018 The Open Watcom Contributors. All Rights Reserved.
 *    Portions Copyright (c) 1983-2002 Sybase, Inc. All Rights Reserved.
 *
 *  ========================================================================
@@ -39,6 +40,7 @@
 #include "dpmi.h"
 #include "uigchar.h"
 
+
 typedef struct {
     unsigned short  int_num;
     unsigned short  real_ds;
@@ -64,34 +66,18 @@ static MONITOR ui_data = {
 
 unsigned    BIOSVidPage;
 
-#ifdef __386__
-LP_VOID firstmeg( unsigned segment, unsigned offset )
-{
-    return( EXTENDER_RM2PM( segment, offset ) );
-}
-#endif
-
-#ifdef __386__
 void IdleInterrupt( void )
 {
-#ifdef __OSI__
-    return;     /* Can't do anything */
+#ifdef _M_I86
+    DOSIdleInterrupt();
+#elif defined( __OSI__ )
+    /* Can't do anything */
 #else
     if( _IsRational() ) {
         DPMIIdle(); /* Assume DPMI if Rational; else dunno */
     }
-    return;
 #endif
 }
-#else
-extern void DOSIdleInterrupt( void );
-#pragma aux DOSIdleInterrupt = "int 28h";
-
-void IdleInterrupt( void )
-{
-    DOSIdleInterrupt();
-}
-#endif
 
 void intern setvideomode( unsigned mode )
 /***************************************/
@@ -155,7 +141,7 @@ LP_VOID UIAPI dos_uivideobuffer( LP_VOID vbuff )
         dblock.es = FP_OFF( vbuff ) >> 4;
         dblock.edi = (FP_OFF( vbuff ) & 0x0f);
         DPMISimulateRealModeInterrupt( BIOS_VIDEO, 0, 0, &dblock );
-        return( firstmeg( dblock.es, dblock.edi ) );
+        return( FIRSTMEG( dblock.es, dblock.edi ) );
     }
     return( vbuff );
 #else
@@ -181,7 +167,7 @@ typedef struct {
  * Others return success but do not modify DS:SI (US DOS 3.x). We need
  * to return a dummy DBCS pair table in that case.
  */
-#ifndef __386__
+#ifdef _M_I86
 
 extern dbcs_pair __far *dos_dbcs_vector_table( void );
 #pragma aux             dos_dbcs_vector_table = \
@@ -230,7 +216,7 @@ static dbcs_pair __far *intern dbcs_vector_table( void )
         if( pblock.real_ds == 0xFFFF ) { // wierd OS/2 value
             return( &dbcs_dummy );
         } else {
-            return( firstmeg( (unsigned) pblock.real_ds, (unsigned) regs.w.si ) );
+            return( FIRSTMEG( pblock.real_ds, regs.w.si ) );
         }
     } else if( _IsRational() ) {
         rm_call_struct dblock;
@@ -239,7 +225,7 @@ static dbcs_pair __far *intern dbcs_vector_table( void )
         dblock.eax = 0x6300;                    /* get DBCS vector table */
         DPMISimulateRealModeInterrupt( 0x21, 0, 0, &dblock );
         if( (dblock.flags & 1) == 0 && dblock.ds ) {
-            return( firstmeg( dblock.ds, dblock.esi ) );
+            return( FIRSTMEG( dblock.ds, dblock.esi ) );
         }
     }
     return( &dbcs_dummy );
@@ -420,11 +406,11 @@ bool intern initbios( void )
         UIData->desqview = (desqview_present() != 0);
         UIData->f10menus = true;
 
-        poffset = firstmeg( BIOS_PAGE, SCREEN_OFFSET );
+        poffset = FIRSTMEG( BIOS_PAGE, BIOS_SCREEN_OFFSET );
         if( UIData->colour == M_MONO ) {
-            UIData->screen.origin = firstmeg( 0xb000, *poffset );
+            UIData->screen.origin = FIRSTMEG( 0xb000, *poffset );
         } else {
-            UIData->screen.origin = firstmeg( 0xb800, *poffset );
+            UIData->screen.origin = FIRSTMEG( 0xb800, *poffset );
         }
         if( UIData->desqview ) {
             UIData->screen.origin =
@@ -445,24 +431,16 @@ bool intern initbios( void )
         if( IsTextMode() ) {
             uiinitcursor();
             initkeyboard();
-            UIData->mouse_acc_delay = 5;   /* ticks */
-            UIData->mouse_rpt_delay = 1;   /* ticks */
-            UIData->mouse_clk_delay = 5;   /* ticks */
-            UIData->tick_delay = 9;        /* ticks */
+            UIData->mouse_acc_delay = uiclockdelay( 277 /* ms */ );  /* 5 ticks */
+            UIData->mouse_rpt_delay = uiclockdelay( 55  /* ms */ );  /* 1 ticks */
+            UIData->mouse_clk_delay = uiclockdelay( 277 /* ms */ );  /* 5 ticks */
+            UIData->tick_delay      = uiclockdelay( 500 /* ms */ );  /* 9 ticks */
             UIData->mouse_speed = 8;       /* mickeys to ticks ratio */
             initialized = true;
         }
     }
     return( initialized );
 }
-
-unsigned UIAPI uiclockdelay( unsigned milli )
-{
-    /* this routine converts milli-seconds into platform  */
-    /* dependant units - used to set mouse & timer delays */
-    return( milli * 18 / 1000 );
-}
-
 
 void intern finibios( void )
 /**************************/

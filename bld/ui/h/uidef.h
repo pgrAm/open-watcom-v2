@@ -2,6 +2,7 @@
 *
 *                            Open Watcom Project
 *
+* Copyright (c) 2002-2018 The Open Watcom Contributors. All Rights Reserved.
 *    Portions Copyright (c) 1983-2002 Sybase, Inc. All Rights Reserved.
 *
 *  ========================================================================
@@ -40,11 +41,21 @@
   #define cdecl
 #endif
 
-#define         P_UNBUFFERED            0
-#define         P_DIALOGUE              1
-#define         P_MENU                  2
-#define         P_VSCREEN               3
-#define         P_BACKGROUND            4
+#define P_UNBUFFERED        0
+#define P_DIALOGUE          1
+#define P_MENU              2
+#define P_VSCREEN           3
+#define P_BACKGROUND        4
+
+#define _ESC                "\033"
+#define _ESC_CHAR           '\033'
+
+typedef enum {
+    UI_MOUSE_PRESS          = 1,
+    UI_MOUSE_PRESS_RIGHT    = 2,
+    UI_MOUSE_PRESS_MIDDLE   = 4,
+    UI_MOUSE_PRESS_ANY      = (UI_MOUSE_PRESS | UI_MOUSE_PRESS_RIGHT | UI_MOUSE_PRESS_MIDDLE)
+} MOUSESTAT;
 
 #if defined( TSR )
 
@@ -70,9 +81,6 @@
 
 #endif
 
-#define _ESC                "\033"
-#define _ESC_CHAR           '\033'
-
 #define         UIAPI
 #define         intern          /* near */
 
@@ -94,7 +102,7 @@ void            intern          braw( BUFFER *, int, int, PIXEL *, int );
 void            intern          bstring( BUFFER *, int, int, ATTR, LPC_STRING, int );
 void            intern          bunframe( struct buffer * );
 int             intern          checkkey( void );
-void            intern          checkmouse( unsigned short *, MOUSEORD *, MOUSEORD *, unsigned long * );
+void            intern          checkmouse( MOUSESTAT *, MOUSEORD *, MOUSEORD *, MOUSETIME * );
 unsigned char   intern          checkshift( void );
 void            intern          closebackground( void );
 void            intern          closewindow( UI_WINDOW * );
@@ -110,7 +118,6 @@ void            intern          frontwindow( UI_WINDOW * );
 unsigned int    intern          getkey( void );
 bool            intern          initbios( void );
 bool            intern          initkeyboard( void );
-bool            intern          installed( int );
 bool            intern          isdialogue( VSCREEN * );
 bool            intern          isscreen( BUFFER * );
 bool            intern          issnow( BUFFER * );
@@ -157,6 +164,9 @@ void            intern          newcursor( void );
 #endif
 #if defined( __NETWARE__ )
 bool            intern          kbdisblocked( void );
+#endif
+#if defined( __DOS__ )
+bool            intern          mouse_installed( void );
 #endif
 
 #ifdef __cplusplus

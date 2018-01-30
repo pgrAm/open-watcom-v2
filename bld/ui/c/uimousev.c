@@ -2,6 +2,7 @@
 *
 *                            Open Watcom Project
 *
+* Copyright (c) 2002-2018 The Open Watcom Contributors. All Rights Reserved.
 *    Portions Copyright (c) 1983-2002 Sybase, Inc. All Rights Reserved.
 *
 *  ========================================================================
@@ -32,6 +33,21 @@
 #include "uidef.h"
 #include "uimouse.h"
 
+
+#define M_PRESS                 1
+#define M_RELEASE               2
+#define M_DCLICK                3
+#define M_HOLD                  4
+#define M_DRAG                  5
+#define M_REPEAT                6
+
+MOUSEORD        MouseRow;
+MOUSEORD        MouseCol;
+bool            MouseOn         = false;
+MOUSESTAT       MouseStatus     = 0;
+bool            MouseInstalled  = false;
+MOUSETIME       MouseTime       = 0L;
+
 static ui_event     mouseevtab[6][3] = {
     { EV_MOUSE_PRESS,   EV_MOUSE_PRESS_R,       EV_MOUSE_PRESS_M },
     { EV_MOUSE_RELEASE, EV_MOUSE_RELEASE_R,     EV_MOUSE_RELEASE_M },
@@ -41,30 +57,20 @@ static ui_event     mouseevtab[6][3] = {
     { EV_MOUSE_REPEAT,  EV_MOUSE_REPEAT_R,      EV_MOUSE_REPEAT_M }
 };
 
-        MOUSEORD            MouseRow;
-        MOUSEORD            MouseCol;
-        bool                MouseOn;
-        unsigned short      MouseStatus;
-        bool                MouseInstalled;
-
-static  int                 MouseForcedOff = 0;
-
-static  bool                MouseRepeat;
-static  unsigned long       MouseTime       = 0L;
-static  int                 MouseLast       = MOUSE_OFF;
-static  unsigned short      MouseLastButton = (unsigned short)~0;
-
+static  int             MouseForcedOff  = 0;
+static  bool            MouseRepeat     = false;
+static  mouse_func      MouseLast       = MOUSE_OFF;
+static  int             MouseLastButton = -1;
 
 bool UIAPI uimouseinstalled( void )
 /*********************************/
 /* call this ONLY after UI has been initialized */
-
 {
     return( MouseInstalled );
 }
 
-static void mouse( int func )
-/***************************/
+static void mouse( mouse_func func )
+/**********************************/
 {
     if( MouseInstalled ) {
         if( MouseForcedOff == 0 ) {
@@ -77,7 +83,7 @@ static void mouse( int func )
 }
 
 void UIAPI uimouseforceoff( void )
-/*********************************/
+/********************************/
 /* this function will turn off the mouse and will prevent UI from turning
    it on until uimouseforceon is called (i.e. moving the mouse will NOT
    turn it on). */
@@ -87,7 +93,7 @@ void UIAPI uimouseforceoff( void )
 }
 
 void UIAPI uimouseforceon( void )
-/********************************/
+/*******************************/
 /* call this function after sometime after uimouseforceoff, if the default
    UI mouse behaviour is desired */
 {
@@ -95,7 +101,7 @@ void UIAPI uimouseforceon( void )
 }
 
 void UIAPI uionmouse( void )
-/***************************/
+/**************************/
 {
     if( MouseOn ) {
         mouse( MOUSE_ON );
@@ -106,7 +112,7 @@ void UIAPI uionmouse( void )
 
 
 void UIAPI uioffmouse( void )
-/****************************/
+/***************************/
 // turn mouse cursor off temporarily ( until next getprimeevent )
 {
     mouse( MOUSE_OFF );
@@ -114,20 +120,20 @@ void UIAPI uioffmouse( void )
 
 
 void UIAPI uihidemouse( void )
-/*****************************/
+/****************************/
 // turn mouse cursor off ( until user clicks or moves )
 {
     MouseOn = false;
 }
 
 
-static unsigned short button( unsigned short status )
-/***************************************************/
+static int button( MOUSESTAT status )
+/***********************************/
 {
-    status &= MOUSE_PRESS_ANY;
-    if( status == MOUSE_PRESS ){
+    status &= UI_MOUSE_PRESS_ANY;
+    if( status == UI_MOUSE_PRESS ) {
         return( 0 );
-    } else if( status == MOUSE_PRESS_RIGHT ){
+    } else if( status == UI_MOUSE_PRESS_RIGHT ) {
         return( 1 );
     } else {
         return( 2 );
@@ -137,45 +143,47 @@ static unsigned short button( unsigned short status )
 ui_event intern mouseevent( void )
 /********************************/
 {
-    ui_event            ui_ev;
-    MOUSEORD            row;
-    MOUSEORD            col;
-    unsigned long       time;
-    unsigned short      status;
-    bool                moved;
-    unsigned short      diff;
-    signed short        butt = 0;
+    ui_event        ui_ev;
+    MOUSEORD        row;
+    MOUSEORD        col;
+    MOUSETIME       time;
+    MOUSESTAT       status;
+    bool            moved;
+    MOUSESTAT       diff;
+    int             butt;
+    int             mindex;
 
     ui_ev = EV_NO_EVENT;
+    mindex = 0;
+    butt = 0;
     if( MouseInstalled ) {
         checkmouse( &status, &row, &col, &time );
-        diff = (status ^ MouseStatus) & MOUSE_PRESS_ANY;
-
-        moved = ( row/UIData->mouse_yscale != MouseRow/UIData->mouse_yscale
-               || col/UIData->mouse_xscale != MouseCol/UIData->mouse_xscale );
-
-        if( moved ){
-            if( MouseStatus & MOUSE_PRESS_ANY ){
+        diff = (status ^ MouseStatus) & UI_MOUSE_PRESS_ANY;
+        moved = ( row / UIData->mouse_yscale != MouseRow / UIData->mouse_yscale
+               || col / UIData->mouse_xscale != MouseCol / UIData->mouse_xscale );
+        mindex = 0;
+        butt = 0;
+        if( moved ) {
+            if( MouseStatus & UI_MOUSE_PRESS_ANY ) {
                 /* DO NOT TURN ON THE MOUSE IF YOU ARE DRAGGING */
                 /* i.e. don't set MouseOn = true */
                 butt = button( status );
-                ui_ev = M_DRAG;
+                mindex = M_DRAG;
             } else {
                 ui_ev = EV_MOUSE_MOVE;
                 MouseOn = true;
             }
             MouseLastButton = -1;    /* don't double click */
-        } else if( diff & MOUSE_PRESS_ANY ){
-            if( (diff & status) == diff ){
-                if( button(diff) == MouseLastButton  &&
-                    time - MouseTime < UIData->mouse_clk_delay ){
-                    ui_ev = M_DCLICK;
+        } else if( diff & UI_MOUSE_PRESS_ANY ) {
+            if( (diff & status) == diff ) {
+                if( button( diff ) == MouseLastButton && time - MouseTime < UIData->mouse_clk_delay ) {
+                    mindex = M_DCLICK;
                 } else {
-                    ui_ev = M_PRESS;
+                    mindex = M_PRESS;
                     MouseLastButton = button( diff );
                 }
             } else {
-                ui_ev = M_RELEASE;
+                mindex = M_RELEASE;
                 flushkey();
             }
             butt = button( diff );
@@ -183,27 +191,27 @@ ui_event intern mouseevent( void )
             MouseTime = time;
             MouseStatus = status;
             MouseOn = true;
-        } else if( status & MOUSE_PRESS_ANY ){
+        } else if( status & UI_MOUSE_PRESS_ANY ) {
             if( UIData->busy_wait ) {
-                ui_ev = M_HOLD;
+                mindex = M_HOLD;
                 // DEN 92/3/16 - added for dbserver - menus didn't get updated
                 uirefresh();
             }
             butt = button( status );
-            if( !MouseRepeat ){
-                if( time - MouseTime > UIData->mouse_acc_delay ){
-                    ui_ev = M_REPEAT;
+            if( !MouseRepeat ) {
+                if( time - MouseTime > UIData->mouse_acc_delay ) {
+                    mindex = M_REPEAT;
                     MouseRepeat = true;
                     MouseTime = time;
                 }
-            } else if( time - MouseTime > UIData->mouse_rpt_delay ){
-                ui_ev = M_REPEAT;
+            } else if( time - MouseTime > UIData->mouse_rpt_delay ) {
+                mindex = M_REPEAT;
                 MouseTime = time;
             }
         }
 
-        if( ui_ev != EV_NO_EVENT && ui_ev != EV_MOUSE_MOVE ){
-            ui_ev = mouseevtab[ui_ev - 1][butt];
+        if( mindex != 0 && ui_ev != EV_MOUSE_MOVE ) {
+            ui_ev = mouseevtab[mindex - 1][butt];
         }
         MouseRow = row;
         MouseCol = col;
@@ -211,12 +219,12 @@ ui_event intern mouseevent( void )
     return( ui_ev );
 }
 
-VSCREEN* UIAPI uimousepos( VSCREEN *vptr, int *rowptr, int *colptr )
+VSCREEN * UIAPI uimousepos( VSCREEN *vptr, int *rowptr, int *colptr )
 /*******************************************************************/
 {
-    register    VSCREEN*                owner;
+    register VSCREEN    *owner;
 
-    owner = findvscreen( MouseRow/UIData->mouse_yscale, MouseCol/UIData->mouse_xscale );
+    owner = findvscreen( MouseRow / UIData->mouse_yscale, MouseCol / UIData->mouse_xscale );
 
     if( vptr != NULL ) {
         *rowptr = (int)MouseRow - (int)vptr->area.row * UIData->mouse_yscale;
@@ -225,10 +233,10 @@ VSCREEN* UIAPI uimousepos( VSCREEN *vptr, int *rowptr, int *colptr )
         *rowptr = MouseRow;
         *colptr = MouseCol;
     }
-    if( *rowptr < 0  &&  ( *rowptr % UIData->mouse_yscale ) != 0 ) {
+    if( *rowptr < 0 && ( *rowptr % UIData->mouse_yscale ) != 0 ) {
         *rowptr -= UIData->mouse_yscale;
     }
-    if( *colptr < 0  &&  ( *colptr % UIData->mouse_xscale ) != 0 ) {
+    if( *colptr < 0 && ( *colptr % UIData->mouse_xscale ) != 0 ) {
         *colptr -= UIData->mouse_xscale;
     }
     *rowptr /= UIData->mouse_yscale;
@@ -237,27 +245,32 @@ VSCREEN* UIAPI uimousepos( VSCREEN *vptr, int *rowptr, int *colptr )
     return( owner );
 }
 
-VSCREEN* UIAPI uivmousepos( VSCREEN *vptr, ORD *rowptr, ORD *colptr )
+VSCREEN * UIAPI uivmousepos( VSCREEN *vptr, ORD *rowptr, ORD *colptr )
 /********************************************************************/
 {
-    VSCREEN*                            owner;
-    int                      row;
-    int                      col;
+    VSCREEN     *owner;
+    int         row;
+    int         col;
 
     owner = uimousepos( vptr, &row, &col );
     if( vptr != NULL ) {
-        if( row < 0 ) row = 0;
-        if( col < 0 ) col = 0;
-        if( row >= vptr->area.height ) row = vptr->area.height - 1;
-        if( col >= vptr->area.width ) col = vptr->area.width - 1;
+        if( row < 0 )
+            row = 0;
+        if( col < 0 )
+            col = 0;
+        if( row >= vptr->area.height )
+            row = vptr->area.height - 1;
+        if( col >= vptr->area.width ) {
+            col = vptr->area.width - 1;
+        }
     }
-    *rowptr = (ORD) row;
-    *colptr = (ORD) col;
+    *rowptr = (ORD)row;
+    *colptr = (ORD)col;
     return( owner );
 }
 
 void UIAPI uiswapmouse( void )
-/*****************************/
+/****************************/
 {
 
     if( UIData->mouse_swapped ) {
@@ -284,11 +297,11 @@ MOUSEORD UIAPI uigetmcol( void )
 }
 #endif
 
-void UIAPI uigetmouse( ORD *row, ORD *col, bool *status )
-/*******************************************************/
+void UIAPI uigetmouse( ORD _FARD *row, ORD _FARD *col, bool _FARD *status )
+/*************************************************************************/
 {
-    *row = MouseRow/UIData->mouse_yscale;
-    *col = MouseCol/UIData->mouse_xscale;
+    *row = MouseRow / UIData->mouse_yscale;
+    *col = MouseCol / UIData->mouse_xscale;
     *status = MouseOn;
 }
 
@@ -296,4 +309,3 @@ bool UIAPI uivmouseinstalled( void )
 {
     return( MouseInstalled );
 }
-

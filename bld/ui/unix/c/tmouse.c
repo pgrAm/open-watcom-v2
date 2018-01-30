@@ -2,7 +2,7 @@
 *
 *                            Open Watcom Project
 *
-* Copyright (c) 2017-2017 The Open Watcom Contributors. All Rights Reserved.
+* Copyright (c) 2002-2018 The Open Watcom Contributors. All Rights Reserved.
 *    Portions Copyright (c) 1983-2002 Sybase, Inc. All Rights Reserved.
 *
 *  ========================================================================
@@ -55,17 +55,18 @@
 #include "ctkeyb.h"
 
 
+#define MOUSE_SCALE     8
+
+#define MAXBUF          30
+
+#define ANSI_HDR        _ESC "["
+
+#define XT_INIT         _ESC "[?1000h"
+#define XT_FINI         _ESC "[?1000l"
+
 #ifdef __LINUX__
 static void             GPM_parse( void );
 #endif
-
-#define MOUSE_SCALE     8
-
-extern MOUSEORD         MouseRow;
-extern MOUSEORD         MouseCol;
-
-extern unsigned short   MouseStatus;
-extern bool             MouseInstalled;
 
 static enum {
     M_NONE,
@@ -75,15 +76,13 @@ static enum {
 #endif
 } MouseType;
 
-#define MAXBUF  30
-static char     buf[ MAXBUF + 1 ];
-static int      new_sample;
-static int      UIMouseHandle = -1;
+static char             buf[MAXBUF + 1];
+static int              new_sample;
+static int              UIMouseHandle = -1;
 
-#define ANSI_HDR    _ESC "["
-
-#define XT_INIT     _ESC "[?1000h"
-#define XT_FINI     _ESC "[?1000l"
+static int              last_row;
+static int              last_col;
+static MOUSESTAT        last_status;
 
 static  void tm_error( void )
 /***************************/
@@ -97,8 +96,6 @@ static  void tm_error( void )
  *   3- set parameters to reflect it externals
  */
 
-static int last_row, last_col, last_status;
-
 /* Parse an xterm mouse event. */
 static void XT_parse( void )
 /**************************/
@@ -106,42 +103,40 @@ static void XT_parse( void )
     last_col = buf[1] - 0x21;
     last_row = buf[2] - 0x21;
     switch( buf[0] & 0x03 ) {
-    case 0: last_status |= MOUSE_PRESS; break;
-    case 1: last_status |= MOUSE_PRESS_MIDDLE; break;
-    case 2: last_status |= MOUSE_PRESS_RIGHT; break;
+    case 0: last_status |= UI_MOUSE_PRESS; break;
+    case 1: last_status |= UI_MOUSE_PRESS_MIDDLE; break;
+    case 2: last_status |= UI_MOUSE_PRESS_RIGHT; break;
     case 3: last_status = 0;
     }
 }
 
-static int tm_check( unsigned short *status, MOUSEORD *row, MOUSEORD *col, unsigned long *the_time )
-/**************************************************************************************************/
+static bool tm_check( MOUSESTAT *status, MOUSEORD *row, MOUSEORD *col, MOUSETIME *ptime )
+/***************************************************************************************/
 {
-    if( !MouseInstalled ) {
-         uisetmouse( *row, *col );
-         return 0;
-    }
-    UIDebugPrintf1( "mouse_string = '%s'", buf );
-    if( new_sample ) {
-        switch( MouseType ) {
-        case M_XT:
-            XT_parse();
-            break;
+    if( MouseInstalled ) {
+        UIDebugPrintf1( "mouse_string = '%s'", buf );
+        if( new_sample ) {
+            switch( MouseType ) {
+            case M_XT:
+                XT_parse();
+                break;
 #ifdef __LINUX__
-        case M_GPM:
-            GPM_parse();
-            break;
+            case M_GPM:
+                GPM_parse();
+                break;
 #endif
-        case M_NONE:
-            break;
+            case M_NONE:
+                break;
+            }
+            new_sample = 0;
         }
-        new_sample = 0;
+        *row        = last_row;
+        *col        = last_col;
+        *status     = last_status;
+        *ptime      = uiclock();
     }
-    *row        = last_row;
-    *col        = last_col;
-    *status     = last_status;
-    *the_time   = (long)time( NULL ) * 1000L;
     uisetmouse( *row, *col );
-    return 0;
+    return( false );
 }
 
 static int tm_stop( void )
@@ -232,19 +227,19 @@ static void GPM_parse( void )
         type = gpm_buf.tail.gpm_w2.type & 0xf;
     if( type == GPM_DOWN ) {
         if( gpm_buf.button & GPM_B_LEFT )
-            last_status |= MOUSE_PRESS;
+            last_status |= UI_MOUSE_PRESS;
         if( gpm_buf.button & GPM_B_MIDDLE )
-            last_status |= MOUSE_PRESS_MIDDLE;
+            last_status |= UI_MOUSE_PRESS_MIDDLE;
         if( gpm_buf.button & GPM_B_RIGHT ) {
-            last_status |= MOUSE_PRESS_RIGHT;
+            last_status |= UI_MOUSE_PRESS_RIGHT;
         }
     } else if( type == GPM_UP ) {
         if( gpm_buf.button & GPM_B_LEFT )
-            last_status &= ~MOUSE_PRESS;
+            last_status &= ~UI_MOUSE_PRESS;
         if( gpm_buf.button & GPM_B_MIDDLE )
-            last_status &= ~MOUSE_PRESS_MIDDLE;
+            last_status &= ~UI_MOUSE_PRESS_MIDDLE;
         if( gpm_buf.button & GPM_B_RIGHT ) {
-            last_status &= ~MOUSE_PRESS_RIGHT;
+            last_status &= ~UI_MOUSE_PRESS_RIGHT;
         }
     }
 }

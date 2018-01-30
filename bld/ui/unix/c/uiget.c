@@ -33,9 +33,32 @@
 #include "uidef.h"
 #include "uiforce.h"
 #include <sys/types.h>
+#include <sys/time.h>
 #include "uivirt.h"
 #include "unxuiext.h"
 
+
+MOUSETIME UIAPI uiclock( void )
+/*****************************
+ * this routine get time in platform dependant units, 
+ * used for mouse & timer delays 
+ */
+{
+    struct timeval  timev;
+
+    gettimeofday( &timev, NULL );
+    /* return time in miliseconds */
+    return( timev.tv_usec / 1000 + timev.tv_sec * 1000 );
+}
+
+unsigned UIAPI uiclockdelay( unsigned milli )
+/*******************************************
+ * this routine converts milli-seconds into platform
+ * dependant units - used to set mouse & timer delays
+ */
+{
+    return( milli );
+}
 
 void UIAPI uiflush( void )
 /*************************/
@@ -44,12 +67,11 @@ void UIAPI uiflush( void )
     flushkey();
 }
 
-
 static ui_event doget( bool update )
 /**********************************/
 {
-    register ui_event       ui_ev;
-    static   short          ReturnIdle = 1;
+    static short    ReturnIdle = 1;
+    ui_event        ui_ev;
 
     for( ;; ) {
         ui_ev = forcedevent();
@@ -71,14 +93,14 @@ static ui_event doget( bool update )
         _uiwaitkeyb( 60, 0 );
     }
     ReturnIdle = 1;
-    if( ui_ev == EV_REDRAW_SCREEN ){
-        SAREA           screen={ 0, 0, 0, 0 };
+    if( ui_ev == EV_REDRAW_SCREEN ) {
+        SAREA   screen={ 0, 0, 0, 0 };
 
         screen.height= UIData->height;
         screen.width=  UIData->width;
 
         uidirty( screen );
-        UserForcedTermRefresh= true;
+        UserForcedTermRefresh = true;
         physupdate( &screen );
     }
     return( ui_ev );

@@ -2,6 +2,7 @@
 *
 *                            Open Watcom Project
 *
+* Copyright (c) 2002-2018 The Open Watcom Contributors. All Rights Reserved.
 *    Portions Copyright (c) 1983-2002 Sybase, Inc. All Rights Reserved.
 *
 *  ========================================================================
@@ -36,7 +37,38 @@
 #include "uidef.h"
 #include "doscall.h"
 #include "uiforce.h"
+#ifdef _M_I86
+#include "biosui.h"
+#endif
 
+
+MOUSETIME UIAPI uiclock( void )
+/*****************************
+ * this routine get time in platform dependant units,
+ * used for mouse & timer delays
+ */
+{
+#ifdef _M_I86
+    if( _osmode == DOS_MODE )
+        /* ticks count in BIOS area */
+        return( *(unsigned long  __far *)MK_FP( BIOS_PAGE, BIOS_SYSTEM_CLOCK ) );
+#endif
+    return( clock() );
+}
+
+unsigned UIAPI uiclockdelay( unsigned milli )
+/*******************************************
+ * this routine converts milli-seconds into platform
+ * dependant units - used to set mouse & timer delays
+ */
+{
+#ifdef _M_I86
+    if( _osmode == DOS_MODE )
+        /* convert milliseconds to ticks */
+        return( ( milli * 18L ) / 1000L );
+#endif
+    return( milli );
+}
 
 void UIAPI uiflush( void )
 /*************************/
@@ -45,43 +77,15 @@ void UIAPI uiflush( void )
     flushkey();
 }
 
-unsigned long UIAPI uiclock( void )
-/**********************************/
-{
-    #ifdef __386__
-//      return( clock() );
-// clock() is tricky because it is version dependent! In 10.x it used to run
-// at 100 clocks per sec, in 11.0 it's 1000. To avoid confusion we go straight
-// to the OS. MN
-        ULONG ulTime;
-        DosQuerySysInfo(QSV_MS_COUNT, QSV_MS_COUNT, &ulTime, sizeof(ulTime));
-        return ulTime;
-    #else
-        static unsigned long  __far *clock;
-        SEL gbl;
-        SEL lcl;
-
-        if( clock == NULL ) {
-            if( _osmode == DOS_MODE ) {
-                clock = MK_FP( 0x40, 0x6c );    /* time of day in BIOS area */
-            } else {
-                DosGetInfoSeg( &gbl, &lcl );
-                clock = MK_FP( gbl, offsetof( struct _GINFOSEG, msecs ) );
-            }
-        }
-        return( *clock );
-    #endif
-}
-
 ui_event UIAPI uieventsource( bool update )
 /*****************************************/
 {
-    register ui_event       ui_ev;
-    static   int            ReturnIdle = 1;
-    unsigned long           start;
+    static int      ReturnIdle = 1;
+    ui_event        ui_ev;
+    MOUSETIME       start;
 
     start = uiclock();
-    for( ; ; ) {
+    for( ;; ) {
         ui_ev = forcedevent();
         if( ui_ev > EV_NO_EVENT )
             break;
@@ -106,9 +110,13 @@ ui_event UIAPI uieventsource( bool update )
             }
         }
         /* give the system a chance to run something else */
-        if( _osmode != DOS_MODE ) {
+#ifdef _M_I86
+        if( _osmode == OS2_MODE ) {
+#endif
             DosSleep( 1 );
+#ifdef _M_I86
         }
+#endif
     }
     ReturnIdle = 1;
     return( ui_ev );

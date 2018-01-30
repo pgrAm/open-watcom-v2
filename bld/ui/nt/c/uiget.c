@@ -2,6 +2,7 @@
 *
 *                            Open Watcom Project
 *
+* Copyright (c) 2002-2018 The Open Watcom Contributors. All Rights Reserved.
 *    Portions Copyright (c) 1983-2002 Sybase, Inc. All Rights Reserved.
 *
 *  ========================================================================
@@ -36,25 +37,38 @@
 #include <windows.h>
 
 
+MOUSETIME UIAPI uiclock( void )
+/*****************************
+ * this routine get time in platform dependant units,
+ * used for mouse & timer delays
+ */
+{
+    return( GetTickCount() );
+}
+
+unsigned UIAPI uiclockdelay( unsigned milli )
+/*******************************************
+ * this routine converts milli-seconds into platform
+ * dependant units - used to set mouse & timer delays
+ */
+{
+    return( milli );
+}
+
 void UIAPI uiflush( void )
 {
     uiflushevent();
     flushkey();
 }
 
-unsigned long UIAPI uiclock( void )
-{
-    return( GetTickCount() );
-}
-
 ui_event UIAPI uieventsource( bool update )
 {
-    ui_event                ui_ev;
-    static   int            ReturnIdle = 1;
-    unsigned long           start;
+    static int      ReturnIdle = 1;
+    ui_event        ui_ev;
+    MOUSETIME       start;
 
     start = uiclock();
-    for( ; ; ) {
+    for( ;; ) {
         ui_ev = forcedevent();
         if( ui_ev > EV_NO_EVENT )
             break;

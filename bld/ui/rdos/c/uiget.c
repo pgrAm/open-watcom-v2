@@ -2,6 +2,7 @@
 *
 *                            Open Watcom Project
 *
+* Copyright (c) 2002-2018 The Open Watcom Contributors. All Rights Reserved.
 *    Portions Copyright (c) 1983-2002 Sybase, Inc. All Rights Reserved.
 *
 *  ========================================================================
@@ -36,7 +37,9 @@
 #include "uiforce.h"
 
 
-extern int      WaitHandle;
+typedef ui_event (*event_proc)(void);
+
+extern int              WaitHandle;
 
 static uitimer_callback *Callback = NULL;
 static int              TimerPeriodMs = 0;
@@ -48,43 +51,53 @@ void UIAPI uitimer( uitimer_callback *proc, int ms )
     TimerPeriodMs = ms;
 }
 
+MOUSETIME UIAPI uiclock( void )
+/*****************************
+ * this routine get time in platform dependant units,
+ * used for mouse & timer delays
+ */
+{
+    /* use 1 ms precission (timers) */
+    return( RdosGetLongSysTime() / 1192L );
+}
+
+unsigned UIAPI uiclockdelay( unsigned milli )
+/*******************************************
+ * this routine converts milli-seconds into platform
+ * dependant units - used to set mouse & timer delays
+ */
+{
+    /* use 1 ms precission (timers) */
+    return( milli);
+}
+
 void UIAPI uiflush( void )
 {
     uiflushevent();
     flushkey();
 }
 
-unsigned long UIAPI uiclock( void )
-{
-    unsigned long msb;
-    unsigned long lsb;
-
-    RdosGetSysTime( &msb, &lsb );
-    return( lsb );
-}
-
 ui_event UIAPI uieventsource( bool update )
 {
-    ui_event            ui_ev;
-    static int          ReturnIdle = 1;
-    unsigned long       start;
-    ui_event            ( *proc )();
+    static int      ReturnIdle = 1;
+    ui_event        ui_ev;
+    MOUSETIME       start;
+    event_proc          proc;
 
     start = uiclock();
-    for( ; ; ) {
+    for( ;; ) {
         if( HasEscape ) {
             HasEscape = false;
             ui_ev = EV_ESCAPE;
+            break;
         }
-        else
-            ui_ev = forcedevent();
-
+        ui_ev = forcedevent();
         if( ui_ev > EV_NO_EVENT )
             break;
 
-        if( Callback && TimerPeriodMs ) {
-            proc = (void *)RdosWaitTimeout( WaitHandle, TimerPeriodMs );
-            if( proc == 0) {
+        if( Callback != NULL && TimerPeriodMs ) {
+            proc = (event_proc)RdosWaitTimeout( WaitHandle, TimerPeriodMs );
+            if( proc == NULL ) {
                 (*Callback)();
             } else {
                 ui_ev = (*proc)();
@@ -93,8 +106,8 @@ ui_event UIAPI uieventsource( bool update )
                 }
             }
         } else {
-            proc = (void *)RdosWaitTimeout( WaitHandle, 25 );
-            if( proc != 0) {
+            proc = (event_proc)RdosWaitTimeout( WaitHandle, 25 );
+            if( proc != NULL ) {
                 ui_ev = (*proc)();
                 if( ui_ev > EV_NO_EVENT ) {
                     break;
@@ -114,8 +127,8 @@ ui_event UIAPI uieventsource( bool update )
                 }
             }
 
-            proc = (void *)RdosWaitTimeout( WaitHandle, 250 );
-            if( proc != 0) {
+            proc = (event_proc)RdosWaitTimeout( WaitHandle, 250 );
+            if( proc != NULL ) {
                 ui_ev = (*proc)();
                 if( ui_ev > EV_NO_EVENT ) {
                     break;

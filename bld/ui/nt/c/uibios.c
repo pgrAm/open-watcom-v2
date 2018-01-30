@@ -2,6 +2,7 @@
 *
 *                            Open Watcom Project
 *
+* Copyright (c) 2002-2018 The Open Watcom Contributors. All Rights Reserved.
 *    Portions Copyright (c) 1983-2002 Sybase, Inc. All Rights Reserved.
 *
 *  ========================================================================
@@ -103,18 +104,13 @@ bool intern initbios( void )
     UIData->screen.increment = UIData->width;
     uiinitcursor();
     initkeyboard();
-    UIData->mouse_acc_delay = 250;
-    UIData->mouse_rpt_delay = 100;
-    UIData->mouse_clk_delay = 250;
-    UIData->tick_delay = 500;
+    UIData->mouse_acc_delay = uiclockdelay( 250 /* ms */ );
+    UIData->mouse_rpt_delay = uiclockdelay( 100 /* ms */ );
+    UIData->mouse_clk_delay = uiclockdelay( 250 /* ms */ );
+    UIData->tick_delay      = uiclockdelay( 500 /* ms */ );
     UIData->mouse_speed = 8;
 
     return( true );
-}
-
-unsigned UIAPI uiclockdelay( unsigned milli )
-{
-    return( milli );
 }
 
 void intern finibios( void )
@@ -150,7 +146,7 @@ void intern physupdate( SAREA *area )
 
         for( j = sr.Top; j <= sr.Bottom; j++ ) {
             for( i = sr.Left; i <= sr.Right; i++ ) {
-                buff[i - sr.Left] = ((PIXEL *)UIData->screen.origin)[j * UIData->width + i].ch;
+                buff[i - sr.Left] = UIData->screen.origin[j * UIData->width + i].ch;
             }
             buff[i - sr.Left] = 0;
             printf( "%s\n", buff );

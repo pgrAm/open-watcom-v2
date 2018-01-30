@@ -2,6 +2,7 @@
 *
 *                            Open Watcom Project
 *
+* Copyright (c) 2002-2018 The Open Watcom Contributors. All Rights Reserved.
 *    Portions Copyright (c) 1983-2002 Sybase, Inc. All Rights Reserved.
 *
 *  ========================================================================
@@ -47,19 +48,12 @@
 #define KEY_ALT_PRESSED         0x2
 #define KEY_SHIFT_PRESSED       0x1
 
-extern MOUSEORD         MouseRow;
-extern MOUSEORD         MouseCol;
-extern bool             MouseOn;
-extern bool             MouseInstalled;
-extern unsigned short   MouseStatus;
-
 int                     WaitHandle;
 
-static int              KeyInstalled;
-
+static bool             KeyInstalled;
 static ORD              currMouseRow;
 static ORD              currMouseCol;
-static ORD              currMouseStatus;
+static MOUSESTAT        currMouseStatus;
 
 static shiftkey_event   ShiftkeyEvents[] = {
     EV_SHIFT_PRESS,     EV_SHIFT_RELEASE,
@@ -138,30 +132,31 @@ static ui_event KeyEventProc( void )
 
 static ui_event MouseEventProc( void )
 {
-    ORD stat = 0;
-    int row;
-    int col;
+    MOUSESTAT   stat;
+    int         row;
+    int         col;
 
+    stat = 0;
     if( RdosGetLeftButton() )
-        stat |= MOUSE_PRESS;
-
+        stat |= UI_MOUSE_PRESS;
     if( RdosGetRightButton() )
-        stat |= MOUSE_PRESS_RIGHT;
+        stat |= UI_MOUSE_PRESS_RIGHT;
 
     RdosGetMousePosition(  &col, &row );
 
     if( stat != currMouseStatus ) {
-        if( !(stat & MOUSE_PRESS) && (currMouseStatus & MOUSE_PRESS) )
+        if( (stat & UI_MOUSE_PRESS) == 0 && (currMouseStatus & UI_MOUSE_PRESS) )
             RdosGetLeftButtonReleasePosition( &col, &row );
 
-        if( !(stat & MOUSE_PRESS_RIGHT) && (currMouseStatus & MOUSE_PRESS_RIGHT) )
+        if( (stat & UI_MOUSE_PRESS_RIGHT) == 0 && (currMouseStatus & UI_MOUSE_PRESS_RIGHT) )
             RdosGetRightButtonReleasePosition( &col, &row );
 
-        if( (stat & MOUSE_PRESS) && !(currMouseStatus & MOUSE_PRESS) )
+        if( (stat & UI_MOUSE_PRESS) && (currMouseStatus & UI_MOUSE_PRESS) == 0 )
             RdosGetLeftButtonPressPosition( &col, &row );
 
-        if( (stat & MOUSE_PRESS_RIGHT) && !(currMouseStatus & MOUSE_PRESS_RIGHT) )
+        if( (stat & UI_MOUSE_PRESS_RIGHT) && (currMouseStatus & UI_MOUSE_PRESS_RIGHT) == 0 ) {
             RdosGetRightButtonPressPosition( &col, &row );
+        }
     }
     currMouseRow = row;
     currMouseCol = col;
@@ -176,7 +171,7 @@ bool intern initkeyboard( void )
         if( WaitHandle == 0 )
             WaitHandle = RdosCreateWait();
 
-        RdosAddWaitForKeyboard( WaitHandle, (int)(&KeyEventProc) );
+        RdosAddWaitForKeyboard( WaitHandle, (int)KeyEventProc );
     }
     KeyInstalled = true;
 
@@ -225,7 +220,7 @@ void uimousespeed( unsigned speed )
 
 bool UIAPI initmouse( init_mode install )
 {
-    unsigned long   tmp;
+    MOUSETIME   tmp;
 
     if( install == INIT_MOUSELESS ) {
         return( false );
@@ -237,7 +232,7 @@ bool UIAPI initmouse( init_mode install )
         if( WaitHandle == 0 )
             WaitHandle = RdosCreateWait();
 
-        RdosAddWaitForMouse( WaitHandle, (int)(&MouseEventProc) );
+        RdosAddWaitForMouse( WaitHandle, (int)MouseEventProc );
         RdosSetMouseWindow( 0, 0, 8 * UIData->width - 1, 8 * UIData->height - 1 );
         RdosSetMouseMickey( 8, 8 );
         RdosShowMouse();
@@ -269,7 +264,7 @@ void UIAPI uisetmouseposn( ORD row, ORD col )
     uisetmouse( row, col );
 }
 
-void intern checkmouse( unsigned short *pstatus, MOUSEORD *prow, MOUSEORD *pcol, unsigned long *ptime )
+void intern checkmouse( MOUSESTAT *pstatus, MOUSEORD *prow, MOUSEORD *pcol, MOUSETIME *ptime )
 {
     *pstatus = currMouseStatus;
     *prow = currMouseRow;
